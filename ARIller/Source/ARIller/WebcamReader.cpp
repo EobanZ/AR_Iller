@@ -33,8 +33,12 @@ void AWebcamReader::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//Get Video Path
+	FString RelativeContentPath = FPaths::GameContentDir();
+	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
+
 	// Open the stream
-	stream.open(CameraID);
+	stream.open(RelativeContentPathString + "Iller.m4v"); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
@@ -52,6 +56,10 @@ void AWebcamReader::BeginPlay()
 		DoProcessing();
 		UpdateTexture();
 		OnNextVideoFrame();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Didnt open stream"));
 	}
 	
 }
