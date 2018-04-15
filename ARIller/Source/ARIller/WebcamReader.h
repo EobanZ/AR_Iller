@@ -6,15 +6,20 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
+#include "opencv2/calib3d.hpp"
 
 #include "Engine/Texture2D.h"
+#include "Runtime/Engine/Classes/Camera/CameraComponent.h"
+#include "Runtime/Engine/Classes/GameFramework/Pawn.h"
+#include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
+#include "Runtime/Core/Public/Math/UnrealMathUtility.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WebcamReader.generated.h"
 
 UCLASS()
-class ARILLER_API AWebcamReader : public AActor
+class ARILLER_API AWebcamReader : public APawn
 {
 	GENERATED_BODY()
 	
@@ -63,6 +68,7 @@ public:
 	void ChangeOperation();
 
 	
+	
 	// OpenCV fields
 	cv::Mat frame;
 	cv::VideoCapture stream;
@@ -88,6 +94,37 @@ public:
 	// The current data array
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
 	TArray<FColor> Data;
+
+
+	//Calculate FOV
+	float cameraMatrix[2][2];
+	float cameraDistortion[5];
+	int* imageWith = new int; //ohne pointer hats hier immer bugs gegeben
+	int* imageHeight = new int;
+	double* apertureWidth = new double;
+	double* apertureHeight = new double;	
+	cv::Point2d* principalPoint = new cv::Point2d;
+	float fovx;
+	float fovy;
+	float aspectRatio;
+	float focalLenght;
+	float billboardDistance = 10000; //100m
+
+	UCameraComponent* cam;
+	UStaticMeshComponent* billboard;
+	
+	void CalculateAndSetFOV();
+
+	void LoadConfigFile();
+
+	void ResizeBillboard();
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Reference", Keywords = "Set Camera Reference"), Category = Webcam)
+	void SetCameraReference(UCameraComponent* cameraComponent);
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Billboard Reference", Keywords = "Set Billboard Reference"), Category = Webcam)
+	void SetBillboardReference(UStaticMeshComponent* billboardComponent);
+
 
 protected:
 
