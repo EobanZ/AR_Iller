@@ -17,11 +17,11 @@ AWebcamReader::AWebcamReader()
 	// Initialize OpenCV and webcam properties
 	CameraID = 0;
 	OperationMode = 0;
-	RefreshRate = 25;
+	RefreshRate = 60;
 	isStreamOpen = false;
 	VideoSize = FVector2D(0, 0);
 	ShouldResize = false;
-	ResizeDeminsions = FVector2D(320, 240);
+	ResizeDeminsions = FVector2D(1920, 1080);
 	RefreshTimer = 0.0f;
 	stream = cv::VideoCapture();
 	frame = cv::Mat();	
@@ -64,10 +64,10 @@ void AWebcamReader::BeginPlay()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Didnt open stream"));
+		UE_LOG(LogTemp, Error, TEXT("Didnt open stream"));
 	}
 
-	billboard->SetRelativeLocation(FVector(billboardDistance, 0, 0));
+	
 	
 }
 
@@ -171,52 +171,21 @@ void AWebcamReader::UpdateTexture()
 
 void AWebcamReader::CalculateAndSetFOV()
 {
-	
-	double tempFOVx = -1;
-	double tempFOVy = -1;
-	double tempFocalLenght = -1;
-	double tempAspectRatio = -1;
-
-	UE_LOG(LogTemp, Warning, TEXT("tempFOVx vor funktion: %d"),tempFOVx);
+	cam->SetRelativeLocation(FVector(-billboardDistance, 0, 0));
 	
 	cv::Mat camMatrix = cv::Mat();
 	camMatrix =	cv::Mat(3, 3, CV_64F, cameraMatrix);
-	for (int i = 0; i<3;i++)
-	{
-		for (int j = 0; j<3;j++)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("camMatrix: %i %i: %f"), i,j,camMatrix.at<float>(i,j));
-		}
-	}
 
 
-	UE_LOG(LogTemp, Warning, TEXT("image Size: w: %i h:%i"), *imageWith, *imageHeight);
-	UE_LOG(LogTemp, Warning, TEXT("apertureWidth: %f"), *apertureWidth);
-	UE_LOG(LogTemp, Warning, TEXT("apertureHeight: %f"), *apertureHeight);
-	
+	cv::calibrationMatrixValues(camMatrix, cv::Size(*imageWith, *imageHeight), 1, 1, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
 
-	cv::Size imageSize(*imageWith, *imageHeight);
-
-	cv::calibrationMatrixValues(camMatrix, imageSize, *apertureWidth, *apertureHeight, tempFOVx, tempFOVy, tempFocalLenght, *principalPoint, tempAspectRatio);
-
-	fovx = (float)tempFOVx;
-	fovy = (float)tempFOVy;
-	focalLenght = (float)tempFocalLenght;
-	aspectRatio = (float)tempAspectRatio;
-
-	UE_LOG(LogTemp, Warning, TEXT("tempFOVx: %f"), tempFOVx);
-	UE_LOG(LogTemp, Warning, TEXT("fovx var: %f"), fovx);
-	UE_LOG(LogTemp, Warning, TEXT("fovx var: %f"), fovx);
-
+	UE_LOG(LogTemp, Warning, TEXT("Calculated FOV: %f"), fovx);
+	UE_LOG(LogTemp, Warning, TEXT("FocalLenght: %f"), focalLenght);
 	if (cam) 
 	{
-		//cam->SetFieldOfView(fovx/2); // ist noch nicht richtig. bei 180 schwarzer bildschirm
-		//cam->SetAspectRatio(1+1/aspectRatio);
 
 		ResizeBillboard();
 
-		UE_LOG(LogTemp, Warning, TEXT("Field of fiew was set to: %f"), cam->FieldOfView);
-		UE_LOG(LogTemp, Warning, TEXT("Aspect Ratio was set to: %f"), cam->AspectRatio);
 	}
 	
 
@@ -229,19 +198,16 @@ void AWebcamReader::LoadConfigFile()
 	*imageWith = 1920;
 	*imageHeight = 1080;
 
-	*apertureWidth = 1.f;
-	*apertureHeight = 1.f;
-	
 	//temp cameramatrix
 	cameraMatrix[0][0] = 3375.38;
 	cameraMatrix[0][1] = 0;
-	cameraMatrix[0][2] = 996.988;
+	cameraMatrix[0][2] = *imageWith/2;
 	cameraMatrix[1][0] = 0;
 	cameraMatrix[1][1] = 3411.35;
-	cameraMatrix[1][2] = 649.654;
+	cameraMatrix[1][2] = *imageHeight/2;
 	cameraMatrix[2][0] = 0;
 	cameraMatrix[2][1] = 0;
-	cameraMatrix[2][2] = 1;
+	cameraMatrix[2][2] = 1.0f;
 
 	//temp camera distortion
 	cameraDistortion[0] = 0.0111965;
@@ -261,13 +227,15 @@ void AWebcamReader::ResizeBillboard()
 	float falpha = 180 - 90 - fbeta;
 	calculatedSize = billboardDistance*FMath::Sin(fbeta) / FMath::Sin(falpha);
 
-	UE_LOG(LogTemp, Warning, TEXT("beta: %f"), fbeta);
-	UE_LOG(LogTemp, Warning, TEXT("alpha: %f"), falpha);
-	UE_LOG(LogTemp, Warning, TEXT("Aspect Ratio was set to: %f"), cam->AspectRatio);
-	UE_LOG(LogTemp, Warning, TEXT("sin beta: %f"), FMath::Sin(fbeta));
-	UE_LOG(LogTemp, Warning, TEXT("sin alpha: %f"), FMath::Sin(falpha));
-	//billboard->SetWorldScale3D(FVector(16 * 100000, 16*100000, 16 * 100000));
-	billboard->SetRelativeScale3D(FVector(.1f, billboardDistance, billboardDistance * cam->AspectRatio));
+	UE_LOG(LogTemp, Warning, TEXT("fov: %f"), cam->FieldOfView);
+	UE_LOG(LogTemp, Warning, TEXT("Calculate BillboardSize With: %f"), calculatedSize);
+	UE_LOG(LogTemp, Warning, TEXT("Aspect Ratio: %f"), cam->AspectRatio);
+
+	float billboardScalefactorX = calculatedSize/50;
+	float billboardScalefactorY = (calculatedSize* (1 / cam->AspectRatio))/50;
+
+	billboard->SetRelativeScale3D(FVector(1, billboardScalefactorX, billboardScalefactorY));
+
 }
 
 void AWebcamReader::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)

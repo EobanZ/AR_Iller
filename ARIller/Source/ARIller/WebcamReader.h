@@ -101,14 +101,13 @@ public:
 	float cameraDistortion[5];
 	int* imageWith = new int; //ohne pointer hats hier immer bugs gegeben
 	int* imageHeight = new int;
-	double* apertureWidth = new double;
-	double* apertureHeight = new double;	
+
 	cv::Point2d* principalPoint = new cv::Point2d;
-	float fovx;
-	float fovy;
-	float aspectRatio;
-	float focalLenght;
-	float billboardDistance = 10000; //100m
+	double fovx;
+	double fovy;
+	double aspectRatio;
+	double focalLenght;
+	double billboardDistance = 10000; //100m
 
 	UCameraComponent* cam;
 	UStaticMeshComponent* billboard;
