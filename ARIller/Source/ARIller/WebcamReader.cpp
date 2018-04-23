@@ -11,7 +11,7 @@ using namespace std;
 // Sets default values
 AWebcamReader::AWebcamReader()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Initialize OpenCV and webcam properties
@@ -24,7 +24,7 @@ AWebcamReader::AWebcamReader()
 	ResizeDeminsions = FVector2D(1920, 1080);
 	RefreshTimer = 0.0f;
 	stream = cv::VideoCapture();
-	frame = cv::Mat();	
+	frame = cv::Mat();
 
 }
 
@@ -43,13 +43,13 @@ void AWebcamReader::BeginPlay()
 	{
 		isStreamOpen = true;
 		UpdateFrame();
-		
+
 		VideoSize = FVector2D(frame.cols, frame.rows);
 		size = cv::Size(ResizeDeminsions.X, ResizeDeminsions.Y);
 		VideoTexture = UTexture2D::CreateTransient(VideoSize.X, VideoSize.Y);
 		VideoTexture->UpdateResource();
 		VideoUpdateTextureRegion = new FUpdateTextureRegion2D(0, 0, 0, 0, VideoSize.X, VideoSize.Y);
-		
+
 
 		// Initialize data array
 		Data.Init(FColor(0, 0, 0, 255), VideoSize.X * VideoSize.Y);
@@ -67,8 +67,8 @@ void AWebcamReader::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("Didnt open stream"));
 	}
 
-	
-	
+
+
 }
 
 // Called every frame
@@ -85,7 +85,7 @@ void AWebcamReader::Tick(float DeltaTime)
 		UpdateTexture();
 		OnNextVideoFrame();
 	}
-	
+
 
 }
 
@@ -162,7 +162,7 @@ void AWebcamReader::UpdateTexture()
 				Data[i].R = frame.data[i * 3 + 2];
 			}
 		}
-		
+
 		// Update texture 2D
 		UpdateTextureRegions(VideoTexture, (int32)0, (uint32)1, VideoUpdateTextureRegion, (uint32)(4 * VideoSize.X), (uint32)4, (uint8*)Data.GetData(), false);
 	}
@@ -172,24 +172,38 @@ void AWebcamReader::UpdateTexture()
 void AWebcamReader::CalculateAndSetFOV()
 {
 	cam->SetRelativeLocation(FVector(-billboardDistance, 0, 0));
-	
+
 	cv::Mat camMatrix = cv::Mat();
-	camMatrix =	cv::Mat(3, 3, CV_64F, cameraMatrix);
+	camMatrix = cv::Mat(3, 3, CV_64F, Scalar(0));
+	cv::Mat mat = cv::Mat();
+	mat.create(3, 3, CV_64F);
+	mat.setTo(0.0);
+	mat.at<float>(0, 0) = cameraMatrix[0][0];
+	mat.at<float>(0, 2) = cameraMatrix[0][2];
+	mat.at<float>(1, 1) = cameraMatrix[1][1];
+	mat.at<float>(1, 2) = cameraMatrix[1][2];
+	mat.at<float>(2, 2) = cameraMatrix[2][2];
+
+	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
+	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
+
+	cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
 
 
-	cv::calibrationMatrixValues(camMatrix, cv::Size(*imageWith, *imageHeight), 1, 1, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
+	/*fovx = (double) FMath::Atan2(2 * cameraMatrix[0][0], *imageWith)* 180.0 / PI;
+	fovy = (double)FMath::Atan2(2 * cameraMatrix[1][1], *imageHeight)*180.0/PI;*/
+	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
+	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
 
-	UE_LOG(LogTemp, Warning, TEXT("Calculated FOV: %f"), fovx);
-	UE_LOG(LogTemp, Warning, TEXT("FocalLenght: %f"), focalLenght);
-	if (cam) 
+	if (cam)
 	{
 
 		ResizeBillboard();
 
 	}
-	
 
-	
+
+
 }
 
 void AWebcamReader::LoadConfigFile()
@@ -201,10 +215,10 @@ void AWebcamReader::LoadConfigFile()
 	//temp cameramatrix
 	cameraMatrix[0][0] = 3375.38;
 	cameraMatrix[0][1] = 0;
-	cameraMatrix[0][2] = *imageWith/2;
+	cameraMatrix[0][2] = 966.988;
 	cameraMatrix[1][0] = 0;
 	cameraMatrix[1][1] = 3411.35;
-	cameraMatrix[1][2] = *imageHeight/2;
+	cameraMatrix[1][2] = 649.654;
 	cameraMatrix[2][0] = 0;
 	cameraMatrix[2][1] = 0;
 	cameraMatrix[2][2] = 1.0f;
@@ -215,7 +229,7 @@ void AWebcamReader::LoadConfigFile()
 	cameraDistortion[2] = 3.13673;
 	cameraDistortion[3] = 0.0091511;
 	cameraDistortion[4] = 0.00573227;
-		
+
 
 }
 
@@ -223,16 +237,16 @@ void AWebcamReader::ResizeBillboard()
 {
 	float calculatedSize;
 
-	float fbeta = cam->FieldOfView/2;
+	float fbeta = cam->FieldOfView / 2;
 	float falpha = 180 - 90 - fbeta;
-	calculatedSize = billboardDistance*FMath::Sin(fbeta) / FMath::Sin(falpha);
+	calculatedSize = billboardDistance * FMath::Sin(fbeta) / FMath::Sin(falpha);
 
 	UE_LOG(LogTemp, Warning, TEXT("fov: %f"), cam->FieldOfView);
 	UE_LOG(LogTemp, Warning, TEXT("Calculate BillboardSize With: %f"), calculatedSize);
 	UE_LOG(LogTemp, Warning, TEXT("Aspect Ratio: %f"), cam->AspectRatio);
 
-	float billboardScalefactorX = calculatedSize/50;
-	float billboardScalefactorY = (calculatedSize* (1 / cam->AspectRatio))/50;
+	float billboardScalefactorX = calculatedSize / 50;
+	float billboardScalefactorY = (calculatedSize* (1 / cam->AspectRatio)) / 50;
 
 	billboard->SetRelativeScale3D(FVector(1, billboardScalefactorX, billboardScalefactorY));
 
