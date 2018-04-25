@@ -171,7 +171,7 @@ void AWebcamReader::UpdateTexture()
 
 void AWebcamReader::CalculateAndSetFOV()
 {
-	cam->SetRelativeLocation(FVector(-billboardDistance, 0, 0));
+	billboard->SetRelativeLocation(FVector(billboardDistance, 0, 0));
 
 	cv::Mat camMatrix = cv::Mat();
 	camMatrix = cv::Mat(3, 3, CV_64F, Scalar(0));
@@ -187,13 +187,16 @@ void AWebcamReader::CalculateAndSetFOV()
 	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
 	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
 
-	cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
+	//cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
+	fovx = (2 * FMath::Atan(1920 / (2 * 3375.35)))*180/PI;
+	fovy = (2 * FMath::Atan(1080 / (2 * 3411.35))) * 180 / PI;
+	cam->SetFieldOfView(fovx);
 
 
 	/*fovx = (double) FMath::Atan2(2 * cameraMatrix[0][0], *imageWith)* 180.0 / PI;
 	fovy = (double)FMath::Atan2(2 * cameraMatrix[1][1], *imageHeight)*180.0/PI;*/
-	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
-	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
+	UE_LOG(LogTemp, Warning, TEXT("fovx_new: %f"), fovx);
+	UE_LOG(LogTemp, Warning, TEXT("fovy_new: %f"), fovy);
 
 	if (cam)
 	{
@@ -235,20 +238,27 @@ void AWebcamReader::LoadConfigFile()
 
 void AWebcamReader::ResizeBillboard()
 {
-	float calculatedSize;
+	/*float calculatedSize;
 
 	float fbeta = cam->FieldOfView / 2;
 	float falpha = 180 - 90 - fbeta;
 	calculatedSize = billboardDistance * FMath::Sin(fbeta) / FMath::Sin(falpha);
-
+	UE_LOG(LogTemp, Warning, TEXT("MEINE_LOG_VON_fov: %f"), cam->FieldOfView);
 	UE_LOG(LogTemp, Warning, TEXT("fov: %f"), cam->FieldOfView);
 	UE_LOG(LogTemp, Warning, TEXT("Calculate BillboardSize With: %f"), calculatedSize);
 	UE_LOG(LogTemp, Warning, TEXT("Aspect Ratio: %f"), cam->AspectRatio);
 
-	float billboardScalefactorX = calculatedSize / 50;
-	float billboardScalefactorY = (calculatedSize* (1 / cam->AspectRatio)) / 50;
+	float billboardScalefactorX = calculatedSize;
+	float billboardScalefactorY = (calculatedSize* (1 / cam->AspectRatio));
 
-	billboard->SetRelativeScale3D(FVector(1, billboardScalefactorX, billboardScalefactorY));
+	billboard->SetRelativeScale3D(FVector(1, billboardScalefactorX, billboardScalefactorY));*/
+
+	float distance_to_origin = billboard->GetRelativeTransform().GetLocation().Size();
+
+	float width = distance_to_origin * 2.0 * FMath::Tan(FMath::DegreesToRadians(0.5 * fovx));
+	float height = width * (float)*imageHeight / (float)*imageWith;
+
+	billboard->SetRelativeScale3D(FVector(1, width / 100.0, height / 100.0));
 
 }
 
