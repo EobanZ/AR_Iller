@@ -8,9 +8,11 @@ using namespace cv;
 using namespace std;
 
 
+
 // Sets default values
 AWebcamReader::AWebcamReader()
 {
+
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -38,7 +40,7 @@ void AWebcamReader::BeginPlay()
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
 
 	// Open the stream
-	stream.open(RelativeContentPathString + "Iller.m4v"); //mit webcam hier einfach "CameraID" in die klammern
+	stream.open(RelativeContentPathString + "MarkerPic.mp4"); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
@@ -211,27 +213,43 @@ void AWebcamReader::CalculateAndSetFOV()
 
 void AWebcamReader::LoadConfigFile()
 {
-	//read cameramatrix, apertureWidth/Height
-	*imageWith = 1920;
-	*imageHeight = 1080;
+	////Iller Video
+	//*imageWith = 1920;
+	//*imageHeight = 1080;
 
-	//temp cameramatrix
-	cameraMatrix[0][0] = 3375.38;
+	////temp cameramatrix
+	//cameraMatrix[0][0] = 3375.38;
+	//cameraMatrix[0][1] = 0;
+	//cameraMatrix[0][2] = 966.988;
+	//cameraMatrix[1][0] = 0;
+	//cameraMatrix[1][1] = 3411.35;
+	//cameraMatrix[1][2] = 649.654;
+	//cameraMatrix[2][0] = 0;
+	//cameraMatrix[2][1] = 0;
+	//cameraMatrix[2][2] = 1.0f;
+
+	////temp camera distortion
+	//cameraDistortion[0] = 0.0111965;
+	//cameraDistortion[1] = 0.175178;
+	//cameraDistortion[2] = 3.13673;
+	//cameraDistortion[3] = 0.0091511;
+	//cameraDistortion[4] = 0.00573227;
+
+
+	//Marker Bild
+	*imageWith = 1280;
+	*imageHeight = 720;
+
+	cameraMatrix[0][0] = 969.422;
 	cameraMatrix[0][1] = 0;
-	cameraMatrix[0][2] = 966.988;
+	cameraMatrix[0][2] = 621.848;
 	cameraMatrix[1][0] = 0;
-	cameraMatrix[1][1] = 3411.35;
-	cameraMatrix[1][2] = 649.654;
+	cameraMatrix[1][1] = 976.901;
+	cameraMatrix[1][2] = 369.637;
 	cameraMatrix[2][0] = 0;
 	cameraMatrix[2][1] = 0;
 	cameraMatrix[2][2] = 1.0f;
 
-	//temp camera distortion
-	cameraDistortion[0] = 0.0111965;
-	cameraDistortion[1] = 0.175178;
-	cameraDistortion[2] = 3.13673;
-	cameraDistortion[3] = 0.0091511;
-	cameraDistortion[4] = 0.00573227;
 
 
 }
@@ -260,6 +278,45 @@ void AWebcamReader::ResizeBillboard()
 
 	billboard->SetRelativeScale3D(FVector(1, width / 100.0, height / 100.0));
 
+}
+
+void AWebcamReader::EstimatePosition()
+{
+	cv::Mat Rvec;
+	cv::Mat_<float> Tvec;
+	cv::Mat raux, taux;
+
+	//Später mit übergabeparametern berechnen
+	//if (!cv::solvePnP(points3d, points2d, camMatrix, disCoeff, raux, taux)) return;
+
+	/*raux.convertTo(Rvec, CV_32F);
+	taux.convertTo(Tvec, CV_32F);
+
+	cv::Mat_<float> rotMat(3, 3);
+	cv::Rodrigues(Rvec, rotMat);*/
+
+	//den Cube/das Object mit übergeben um die transform ändern zu können?
+
+	float rArray[9] = { 0.98007, -0.08268, -0.18065
+						- 0.19867, -0.40785, -0.89117,
+						0.00000, 0.90930, -0.41615 };
+	float tArray[3] = { 140, 50, 350 };
+
+	cv::Mat rotMat = Mat(3, 3, CV_32FC1, rArray);
+	cv::Mat tVec = Mat(1, 3, CV_32FC1, tArray);
+
+	planeTransform = FTransform();
+
+	//for (int col = 0; col < 3; col++)
+	//{
+	//	for (int row = 0; row < 3; row++)
+	//	{
+	//		m.transformation.r().mat[row][col] = rotMat(row, col); // Copy rotation component
+	//	}
+	//	m.transformation.t().data[col] = Tvec(col); // Copy translation component
+	//}
+
+	planeTransform = planeTransform * CameraAdditionalRotation;
 }
 
 void AWebcamReader::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)

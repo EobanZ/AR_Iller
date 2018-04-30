@@ -111,12 +111,18 @@ public:
 
 	UCameraComponent* cam;
 	UStaticMeshComponent* billboard;
+
+	FTransform planeTransform;
+
+	const FTransform CameraAdditionalRotation = FTransform(FQuat(FVector(0, 1, 0), -PI / 2), FVector(0, 0, 0), FVector(1, 1, 1));
 	
 	void CalculateAndSetFOV();
 
 	void LoadConfigFile();
 
 	void ResizeBillboard();
+
+	void EstimatePosition();
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Reference", Keywords = "Set Camera Reference"), Category = Webcam)
 	void SetCameraReference(UCameraComponent* cameraComponent);
