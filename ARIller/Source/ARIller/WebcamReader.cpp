@@ -107,6 +107,12 @@ void AWebcamReader::SetBillboardReference(UStaticMeshComponent* billboardCompone
 	this->billboard = billboardComponent;
 }
 
+void AWebcamReader::SetCubeReference(UStaticMeshComponent * cubeComponent)
+{
+	cube = cubeComponent;
+}
+
+
 void AWebcamReader::UpdateFrame()
 {
 	if (stream.isOpened())
@@ -190,8 +196,15 @@ void AWebcamReader::CalculateAndSetFOV()
 	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
 
 	//cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
-	fovx = (2 * FMath::Atan(1920 / (2 * 3375.35)))*180/PI;
-	fovy = (2 * FMath::Atan(1080 / (2 * 3411.35))) * 180 / PI;
+	/*fovx = (2 * FMath::Atan(1920 / (2 * 3375.35)))*180/PI;
+	fovy = (2 * FMath::Atan(1080 / (2 * 3411.35))) * 180 / PI;*/
+	double u0 = cameraMatrix[0][2];
+	double v0 = cameraMatrix[1][2];
+	double fx = cameraMatrix[0][0];
+	double fy = cameraMatrix[1][1];
+	fovx = (FMath::Atan2(u0, fx) + FMath::Atan2(*imageWith - u0, fx)) * 180.0 / PI;
+	fovy = (FMath::Atan2(v0, fy) + FMath::Atan2(*imageHeight - v0, fy)) * 180.0 / PI;
+
 	cam->SetFieldOfView(fovx);
 
 
@@ -204,6 +217,7 @@ void AWebcamReader::CalculateAndSetFOV()
 	{
 
 		ResizeBillboard();
+		EstimatePosition();
 
 	}
 
@@ -256,20 +270,6 @@ void AWebcamReader::LoadConfigFile()
 
 void AWebcamReader::ResizeBillboard()
 {
-	/*float calculatedSize;
-
-	float fbeta = cam->FieldOfView / 2;
-	float falpha = 180 - 90 - fbeta;
-	calculatedSize = billboardDistance * FMath::Sin(fbeta) / FMath::Sin(falpha);
-	UE_LOG(LogTemp, Warning, TEXT("MEINE_LOG_VON_fov: %f"), cam->FieldOfView);
-	UE_LOG(LogTemp, Warning, TEXT("fov: %f"), cam->FieldOfView);
-	UE_LOG(LogTemp, Warning, TEXT("Calculate BillboardSize With: %f"), calculatedSize);
-	UE_LOG(LogTemp, Warning, TEXT("Aspect Ratio: %f"), cam->AspectRatio);
-
-	float billboardScalefactorX = calculatedSize;
-	float billboardScalefactorY = (calculatedSize* (1 / cam->AspectRatio));
-
-	billboard->SetRelativeScale3D(FVector(1, billboardScalefactorX, billboardScalefactorY));*/
 
 	float distance_to_origin = billboard->GetRelativeTransform().GetLocation().Size();
 
@@ -282,7 +282,7 @@ void AWebcamReader::ResizeBillboard()
 
 void AWebcamReader::EstimatePosition()
 {
-	cv::Mat Rvec;
+	cv::Mat_<float> Rvec;
 	cv::Mat_<float> Tvec;
 	cv::Mat raux, taux;
 
@@ -298,14 +298,35 @@ void AWebcamReader::EstimatePosition()
 	//den Cube/das Object mit übergeben um die transform ändern zu können?
 
 	float rArray[9] = { 0.98007, -0.08268, -0.18065
-						- 0.19867, -0.40785, -0.89117,
-						0.00000, 0.90930, -0.41615 };
-	float tArray[3] = { 140, 50, 350 };
+		- 0.19867, -0.40785, -0.89117,
+		0.00000, 0.90930, -0.41615 };
+	//opencv(x,y,z) =  unreal(z,x,-y)
+	//float tArray[3] = { 140, 50, 350 };
+	float tArray[3] = { 350, 140, -50 };
 
 	cv::Mat rotMat = Mat(3, 3, CV_32FC1, rArray);
 	cv::Mat tVec = Mat(1, 3, CV_32FC1, tArray);
 
+	cv::Rodrigues(rotMat, Rvec);
+
+
+	/*FVector rotationVector = FVector(Rvec.at<float>(0, 0), Rvec.at<float>(0, 1), Rvec.at<float>(0, 2));
+	float angle = rotationVector.Size();
+	rotationVector.Normalize();
+	FQuat rotationQuat = FQuat(rotationVector, angle);*/
+	/*FQuat rotationQuat;
+	MatrixToQuaternion(rotationQuat, rotMat);*/
+
+
 	planeTransform = FTransform();
+
+	FMatrix matrix = FMatrix(FVector(0.98007, -0.08268, -0.18065), FVector(-0.19867, -0.40785, -0.89117), FVector(0.00000, 0.90930, -0.41615), FVector(3500, 1400, -500));
+	planeTransform.SetFromMatrix(matrix);
+
+	planeTransform.SetScale3D(FVector(1, 1, 1));
+	/*planeTransform.SetRotation(rotationQuat);
+	planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2)));*/
+
 
 	//for (int col = 0; col < 3; col++)
 	//{
@@ -316,7 +337,57 @@ void AWebcamReader::EstimatePosition()
 	//	m.transformation.t().data[col] = Tvec(col); // Copy translation component
 	//}
 
-	planeTransform = planeTransform * CameraAdditionalRotation;
+	//planeTransform = CameraAdditionalRotation * planeTransform;
+	cube->SetRelativeTransform(planeTransform);
+	
+}
+
+void AWebcamReader::MatrixToQuaternion(FQuat& q, cv::Mat& rotMatrix) const {
+	//geht nicht?
+
+	float a[3][3];
+
+	a[0][0] = rotMatrix.at<float>(0, 0);
+	a[1][0] = rotMatrix.at<float>(1, 0);
+	a[2][0] = rotMatrix.at<float>(2, 0);
+	a[0][1] = rotMatrix.at<float>(0, 1);
+	a[1][1] = rotMatrix.at<float>(1, 1);
+	a[2][1] = rotMatrix.at<float>(2, 1);
+	a[0][2] = rotMatrix.at<float>(0, 2);
+	a[1][2] = rotMatrix.at<float>(1, 2);
+	a[2][2] = rotMatrix.at<float>(2, 2);
+
+	float trace = a[0][0] + a[1][1] + a[2][2]; // I removed + 1.0f; see discussion with Ethan
+	if (trace > 0) {// I changed M_EPSILON to 0
+		float s = 0.5f / sqrtf(trace + 1.0f);
+		q.W = 0.25f / s;
+		q.X = (a[2][1] - a[1][2]) * s;
+		q.Y = (a[0][2] - a[2][0]) * s;
+		q.Z = (a[1][0] - a[0][1]) * s;
+	}
+	else {
+		if (a[0][0] > a[1][1] && a[0][0] > a[2][2]) {
+			float s = 2.0f * sqrtf(1.0f + a[0][0] - a[1][1] - a[2][2]);
+			q.W = (a[2][1] - a[1][2]) / s;
+			q.X = 0.25f * s;
+			q.Y = (a[0][1] + a[1][0]) / s;
+			q.Z = (a[0][2] + a[2][0]) / s;
+		}
+		else if (a[1][1] > a[2][2]) {
+			float s = 2.0f * sqrtf(1.0f + a[1][1] - a[0][0] - a[2][2]);
+			q.W = (a[0][2] - a[2][0]) / s;
+			q.X = (a[0][1] + a[1][0]) / s;
+			q.Y = 0.25f * s;
+			q.Z = (a[1][2] + a[2][1]) / s;
+		}
+		else {
+			float s = 2.0f * sqrtf(1.0f + a[2][2] - a[0][0] - a[1][1]);
+			q.W = (a[1][0] - a[0][1]) / s;
+			q.X = (a[0][2] + a[2][0]) / s;
+			q.Y = (a[1][2] + a[2][1]) / s;
+			q.Z = 0.25f * s;
+		}
+	}
 }
 
 void AWebcamReader::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)

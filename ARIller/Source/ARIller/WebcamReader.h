@@ -14,6 +14,7 @@
 #include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
 #include "Runtime/Core/Public/Math/UnrealMathUtility.h"
 
+#include "Runtime/Engine/Classes/Engine/StaticMeshActor.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WebcamReader.generated.h"
@@ -22,8 +23,8 @@ UCLASS()
 class ARILLER_API AWebcamReader : public APawn
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	AWebcamReader();
 
@@ -31,44 +32,44 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// The device ID opened by the Video Stream
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-	int32 CameraID;
+		int32 CameraID;
 
 	// The operation that will be applied to every frame
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-	int32 OperationMode;
+		int32 OperationMode;
 
 	// If the webcam images should be resized every frame
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-	bool ShouldResize;
+		bool ShouldResize;
 
 	// The targeted resize width and height (width, height)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-	FVector2D ResizeDeminsions;
+		FVector2D ResizeDeminsions;
 
 	// The rate at which the color data array and video texture is updated (in frames per second)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-	float RefreshRate;
+		float RefreshRate;
 
 	// The refresh timer
 	UPROPERTY(BlueprintReadWrite, Category = Webcam)
-	float RefreshTimer;
+		float RefreshTimer;
 
 	// Blueprint Event called every time the video frame is updated
 	UFUNCTION(BlueprintImplementableEvent, Category = Webcam)
-	void OnNextVideoFrame();
+		void OnNextVideoFrame();
 
 	// Change OpenCV operation that will be applied to every frame
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Change Operations", Keywords = "Change Operation"), Category = Webcam)
-	void ChangeOperation();
+		void ChangeOperation();
 
-	
-	
+
+
 	// OpenCV fields
 	cv::Mat frame;
 	cv::VideoCapture stream;
@@ -78,22 +79,22 @@ public:
 	void UpdateFrame();
 	void DoProcessing();
 	void UpdateTexture();
-	
+
 	// If the stream has succesfully opened yet
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
-	bool isStreamOpen;
+		bool isStreamOpen;
 
 	// The videos width and height (width, height)
 	UPROPERTY(BlueprintReadWrite, Category = Webcam)
-	FVector2D VideoSize;
+		FVector2D VideoSize;
 
 	// The current video frame's corresponding texture
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
-	UTexture2D* VideoTexture;
+		UTexture2D* VideoTexture;
 
 	// The current data array
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
-	TArray<FColor> Data;
+		TArray<FColor> Data;
 
 
 	//Calculate FOV
@@ -111,11 +112,12 @@ public:
 
 	UCameraComponent* cam;
 	UStaticMeshComponent* billboard;
+	UStaticMeshComponent* cube;
 
 	FTransform planeTransform;
 
 	const FTransform CameraAdditionalRotation = FTransform(FQuat(FVector(0, 1, 0), -PI / 2), FVector(0, 0, 0), FVector(1, 1, 1));
-	
+
 	void CalculateAndSetFOV();
 
 	void LoadConfigFile();
@@ -124,11 +126,17 @@ public:
 
 	void EstimatePosition();
 
+	void MatrixToQuaternion(FQuat& q, cv::Mat& rotMatrix) const;
+
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Reference", Keywords = "Set Camera Reference"), Category = Webcam)
-	void SetCameraReference(UCameraComponent* cameraComponent);
+		void SetCameraReference(UCameraComponent* cameraComponent);
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Billboard Reference", Keywords = "Set Billboard Reference"), Category = Webcam)
-	void SetBillboardReference(UStaticMeshComponent* billboardComponent);
+		void SetBillboardReference(UStaticMeshComponent* billboardComponent);
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Cube Reference", Keywords = "Set Cube Reference"), Category = Webcam)
+		void SetCubeReference(UStaticMeshComponent* cubeComponent);
+
 
 
 protected:
