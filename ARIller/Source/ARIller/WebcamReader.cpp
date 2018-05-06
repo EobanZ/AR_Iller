@@ -112,6 +112,10 @@ void AWebcamReader::SetCubeReference(UStaticMeshComponent * cubeComponent)
 	cube = cubeComponent;
 }
 
+void AWebcamReader::SetGroundActorReference(AGround* goundActor)
+{
+	ground = goundActor;
+}
 
 void AWebcamReader::UpdateFrame()
 {
@@ -323,8 +327,8 @@ void AWebcamReader::EstimatePosition()
 	FMatrix matrix = FMatrix(FVector(0.98007, -0.08268, -0.18065), FVector(-0.19867, -0.40785, -0.89117), FVector(0.00000, 0.90930, -0.41615), FVector(3500, 1400, -500));
 	planeTransform.SetFromMatrix(matrix);
 
-	planeTransform.SetScale3D(FVector(1, 1, 1));
-	/*planeTransform.SetRotation(rotationQuat);
+	/*planeTransform.SetScale3D(FVector(1, 1, 1));
+	planeTransform.SetRotation(rotationQuat);
 	planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2)));*/
 
 
@@ -339,6 +343,9 @@ void AWebcamReader::EstimatePosition()
 
 	//planeTransform = CameraAdditionalRotation * planeTransform;
 	cube->SetRelativeTransform(planeTransform);
+	
+	//ground->GetStaticMeshComponent()->SetRelativeTransform(planeTransform);
+	ground->SetActorTransform(planeTransform);
 	
 }
 

@@ -14,6 +14,8 @@
 #include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
 #include "Runtime/Core/Public/Math/UnrealMathUtility.h"
 
+#include "Ground.h"
+
 #include "Runtime/Engine/Classes/Engine/StaticMeshActor.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -114,6 +116,9 @@ public:
 	UStaticMeshComponent* billboard;
 	UStaticMeshComponent* cube;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
+	AGround* ground;
+
 	FTransform planeTransform;
 
 	const FTransform CameraAdditionalRotation = FTransform(FQuat(FVector(0, 1, 0), -PI / 2), FVector(0, 0, 0), FVector(1, 1, 1));
@@ -136,6 +141,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Cube Reference", Keywords = "Set Cube Reference"), Category = Webcam)
 		void SetCubeReference(UStaticMeshComponent* cubeComponent);
+
+	void SetGroundActorReference(AGround* goundActor);
 
 
 
