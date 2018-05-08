@@ -35,6 +35,9 @@ void AWebcamReader::BeginPlay()
 {
 	Super::BeginPlay();
 
+	this->SetActorLocation(FVector(0, 0, 0));
+	this->SetActorRotation(FRotator(0, 0, 0));
+
 	//Get Video Path
 	FString RelativeContentPath = FPaths::GameContentDir();
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
@@ -191,31 +194,31 @@ void AWebcamReader::CalculateAndSetFOV()
 	mat.create(3, 3, CV_64F);
 	mat.setTo(0.0);
 	mat.at<float>(0, 0) = cameraMatrix[0][0];
-	mat.at<float>(0, 2) = cameraMatrix[0][2];
+	mat.at<float>(0, 2) = *imageWith*0.5; //cameraMatrix[0][2];
 	mat.at<float>(1, 1) = cameraMatrix[1][1];
-	mat.at<float>(1, 2) = cameraMatrix[1][2];
-	mat.at<float>(2, 2) = cameraMatrix[2][2];
+	mat.at<float>(1, 2) = *imageHeight*0.5; //cameraMatrix[1][2];
+	mat.at<float>(2, 2) = 1.0; // cameraMatrix[2][2];
 
-	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
-	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
-
-	//cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
-	/*fovx = (2 * FMath::Atan(1920 / (2 * 3375.35)))*180/PI;
-	fovy = (2 * FMath::Atan(1080 / (2 * 3411.35))) * 180 / PI;*/
-	double u0 = cameraMatrix[0][2];
-	double v0 = cameraMatrix[1][2];
+							   //cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
+							   /*fovx = (2 * FMath::Atan(1920 / (2 * 3375.35)))*180/PI;
+							   fovy = (2 * FMath::Atan(1080 / (2 * 3411.35))) * 180 / PI;*/
+	double u0 = *imageWith*0.5; //cameraMatrix[0][2];
+	double v0 = *imageHeight*0.5; //cameraMatrix[1][2];
 	double fx = cameraMatrix[0][0];
 	double fy = cameraMatrix[1][1];
 	fovx = (FMath::Atan2(u0, fx) + FMath::Atan2(*imageWith - u0, fx)) * 180.0 / PI;
 	fovy = (FMath::Atan2(v0, fy) + FMath::Atan2(*imageHeight - v0, fy)) * 180.0 / PI;
 
-	cam->SetFieldOfView(fovx);
+	float aspec = *imageWith / *imageHeight;
 
+
+
+	cam->SetFieldOfView(fovx);
 
 	/*fovx = (double) FMath::Atan2(2 * cameraMatrix[0][0], *imageWith)* 180.0 / PI;
 	fovy = (double)FMath::Atan2(2 * cameraMatrix[1][1], *imageHeight)*180.0/PI;*/
-	UE_LOG(LogTemp, Warning, TEXT("fovx_new: %f"), fovx);
-	UE_LOG(LogTemp, Warning, TEXT("fovy_new: %f"), fovy);
+	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
+	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
 
 	if (cam)
 	{
@@ -262,7 +265,7 @@ void AWebcamReader::LoadConfigFile()
 	cameraMatrix[0][1] = 0;
 	cameraMatrix[0][2] = 621.848;
 	cameraMatrix[1][0] = 0;
-	cameraMatrix[1][1] = 976.901;
+	cameraMatrix[1][1] = 976.801;
 	cameraMatrix[1][2] = 369.637;
 	cameraMatrix[2][0] = 0;
 	cameraMatrix[2][1] = 0;
@@ -280,7 +283,9 @@ void AWebcamReader::ResizeBillboard()
 	float width = distance_to_origin * 2.0 * FMath::Tan(FMath::DegreesToRadians(0.5 * fovx));
 	float height = width * (float)*imageHeight / (float)*imageWith;
 
-	billboard->SetRelativeScale3D(FVector(1, width / 100.0, height / 100.0));
+	billboard->SetRelativeScale3D(FVector(0, width / 100.0, height / 100.0));
+
+	UE_LOG(LogTemp, Warning, TEXT("distance to origin: %f, width: %f, height: %f"), distance_to_origin, width, height);
 
 }
 
@@ -301,9 +306,12 @@ void AWebcamReader::EstimatePosition()
 
 	//den Cube/das Object mit übergeben um die transform ändern zu können?
 
-	float rArray[9] = { 0.98007, -0.08268, -0.18065
-		- 0.19867, -0.40785, -0.89117,
-		0.00000, 0.90930, -0.41615 };
+	/*float rArray[9] = { 0.98007, -0.08268, -0.18065
+	- 0.19867, -0.40785, -0.89117,
+	0.00000, 0.90930, -0.41615 };*/
+	float rArray[9] = { 1, 0, 0
+		,0, 1, 0,
+		0.00000, 0, 1 };
 	//opencv(x,y,z) =  unreal(z,x,-y)
 	//float tArray[3] = { 140, 50, 350 };
 	float tArray[3] = { 350, 140, -50 };
@@ -314,88 +322,33 @@ void AWebcamReader::EstimatePosition()
 	cv::Rodrigues(rotMat, Rvec);
 
 
-	/*FVector rotationVector = FVector(Rvec.at<float>(0, 0), Rvec.at<float>(0, 1), Rvec.at<float>(0, 2));
-	float angle = rotationVector.Size();
-	rotationVector.Normalize();
-	FQuat rotationQuat = FQuat(rotationVector, angle);*/
-	/*FQuat rotationQuat;
-	MatrixToQuaternion(rotationQuat, rotMat);*/
-
 
 	planeTransform = FTransform();
 
-	FMatrix matrix = FMatrix(FVector(0.98007, -0.08268, -0.18065), FVector(-0.19867, -0.40785, -0.89117), FVector(0.00000, 0.90930, -0.41615), FVector(3500, 1400, -500));
+	FMatrix matrix = FMatrix(FVector(0.98007, -0.19867, 0), FVector(-0.08268, -0.40785, 0.90930), FVector(-0.18065, -0.89117, -0.41615), FVector(140, 50, 350) + FVector(-(*imageWith*0.5 - cameraMatrix[0][2]) / 100, (*imageHeight*0.5 - cameraMatrix[1][2]) / 100, 0));
 	planeTransform.SetFromMatrix(matrix);
 
-	/*planeTransform.SetScale3D(FVector(1, 1, 1));
-	planeTransform.SetRotation(rotationQuat);
-	planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2)));*/
+
+	planeTransform.SetScale3D(FVector(1, 1, 1));
+	;
+	//planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2)));
+
+	//open cv Koordinatensystem in unreal
+	CameraAdditionalRotation.SetFromMatrix(FMatrix(FVector(0, 1, 0), FVector(0, 0, -1), FVector(1, 0, 0), FVector(0, 0, 0)));
+
+	planeTransform = planeTransform * CameraAdditionalRotation;
+	planeTransform.SetLocation(planeTransform.GetLocation() + FVector(0, 0, 40));
 
 
-	//for (int col = 0; col < 3; col++)
-	//{
-	//	for (int row = 0; row < 3; row++)
-	//	{
-	//		m.transformation.r().mat[row][col] = rotMat(row, col); // Copy rotation component
-	//	}
-	//	m.transformation.t().data[col] = Tvec(col); // Copy translation component
-	//}
-
-	//planeTransform = CameraAdditionalRotation * planeTransform;
 	cube->SetRelativeTransform(planeTransform);
-	
-	//ground->GetStaticMeshComponent()->SetRelativeTransform(planeTransform);
+
 	ground->SetActorTransform(planeTransform);
-	
+
+
+
 }
 
-void AWebcamReader::MatrixToQuaternion(FQuat& q, cv::Mat& rotMatrix) const {
-	//geht nicht?
 
-	float a[3][3];
-
-	a[0][0] = rotMatrix.at<float>(0, 0);
-	a[1][0] = rotMatrix.at<float>(1, 0);
-	a[2][0] = rotMatrix.at<float>(2, 0);
-	a[0][1] = rotMatrix.at<float>(0, 1);
-	a[1][1] = rotMatrix.at<float>(1, 1);
-	a[2][1] = rotMatrix.at<float>(2, 1);
-	a[0][2] = rotMatrix.at<float>(0, 2);
-	a[1][2] = rotMatrix.at<float>(1, 2);
-	a[2][2] = rotMatrix.at<float>(2, 2);
-
-	float trace = a[0][0] + a[1][1] + a[2][2]; // I removed + 1.0f; see discussion with Ethan
-	if (trace > 0) {// I changed M_EPSILON to 0
-		float s = 0.5f / sqrtf(trace + 1.0f);
-		q.W = 0.25f / s;
-		q.X = (a[2][1] - a[1][2]) * s;
-		q.Y = (a[0][2] - a[2][0]) * s;
-		q.Z = (a[1][0] - a[0][1]) * s;
-	}
-	else {
-		if (a[0][0] > a[1][1] && a[0][0] > a[2][2]) {
-			float s = 2.0f * sqrtf(1.0f + a[0][0] - a[1][1] - a[2][2]);
-			q.W = (a[2][1] - a[1][2]) / s;
-			q.X = 0.25f * s;
-			q.Y = (a[0][1] + a[1][0]) / s;
-			q.Z = (a[0][2] + a[2][0]) / s;
-		}
-		else if (a[1][1] > a[2][2]) {
-			float s = 2.0f * sqrtf(1.0f + a[1][1] - a[0][0] - a[2][2]);
-			q.W = (a[0][2] - a[2][0]) / s;
-			q.X = (a[0][1] + a[1][0]) / s;
-			q.Y = 0.25f * s;
-			q.Z = (a[1][2] + a[2][1]) / s;
-		}
-		else {
-			float s = 2.0f * sqrtf(1.0f + a[2][2] - a[0][0] - a[1][1]);
-			q.W = (a[1][0] - a[0][1]) / s;
-			q.X = (a[0][2] + a[2][0]) / s;
-			q.Y = (a[1][2] + a[2][1]) / s;
-			q.Z = 0.25f * s;
-		}
-	}
-}
 
 void AWebcamReader::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)
 {

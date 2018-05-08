@@ -117,11 +117,12 @@ public:
 	UStaticMeshComponent* cube;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-	AGround* ground;
+		AGround* ground;
 
 	FTransform planeTransform;
 
-	const FTransform CameraAdditionalRotation = FTransform(FQuat(FVector(0, 1, 0), -PI / 2), FVector(0, 0, 0), FVector(1, 1, 1));
+
+	FTransform CameraAdditionalRotation;
 
 	void CalculateAndSetFOV();
 
@@ -130,8 +131,6 @@ public:
 	void ResizeBillboard();
 
 	void EstimatePosition();
-
-	void MatrixToQuaternion(FQuat& q, cv::Mat& rotMatrix) const;
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Reference", Keywords = "Set Camera Reference"), Category = Webcam)
 		void SetCameraReference(UCameraComponent* cameraComponent);
