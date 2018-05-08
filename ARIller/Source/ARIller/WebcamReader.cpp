@@ -43,7 +43,7 @@ void AWebcamReader::BeginPlay()
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
 
 	// Open the stream
-	stream.open(RelativeContentPathString + "MarkerPic.mp4"); //mit webcam hier einfach "CameraID" in die klammern
+	stream.open(RelativeContentPathString + "NewMarkerPic.mp4"); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
@@ -238,7 +238,7 @@ void AWebcamReader::LoadConfigFile()
 	//*imageWith = 1920;
 	//*imageHeight = 1080;
 
-	////temp cameramatrix
+	////temp cameramatrix für Iller
 	//cameraMatrix[0][0] = 3375.38;
 	//cameraMatrix[0][1] = 0;
 	//cameraMatrix[0][2] = 966.988;
@@ -261,7 +261,8 @@ void AWebcamReader::LoadConfigFile()
 	*imageWith = 1280;
 	*imageHeight = 720;
 
-	cameraMatrix[0][0] = 969.422;
+	//old camera matrix für marker:
+	/*cameraMatrix[0][0] = 969.422;
 	cameraMatrix[0][1] = 0;
 	cameraMatrix[0][2] = 621.848;
 	cameraMatrix[1][0] = 0;
@@ -269,8 +270,18 @@ void AWebcamReader::LoadConfigFile()
 	cameraMatrix[1][2] = 369.637;
 	cameraMatrix[2][0] = 0;
 	cameraMatrix[2][1] = 0;
-	cameraMatrix[2][2] = 1.0f;
+	cameraMatrix[2][2] = 1.0f;*/
 
+	//camera Matrix für Marker bild mit pr. point genau in der mitte
+	cameraMatrix[0][0] = 969.422;
+	cameraMatrix[0][1] = 0;
+	cameraMatrix[0][2] = 640;
+	cameraMatrix[1][0] = 0;
+	cameraMatrix[1][1] = 969.422;
+	cameraMatrix[1][2] = 360;
+	cameraMatrix[2][0] = 0;
+	cameraMatrix[2][1] = 0;
+	cameraMatrix[2][2] = 1.0f;
 
 
 }
@@ -325,19 +336,19 @@ void AWebcamReader::EstimatePosition()
 
 	planeTransform = FTransform();
 
-	FMatrix matrix = FMatrix(FVector(0.98007, -0.19867, 0), FVector(-0.08268, -0.40785, 0.90930), FVector(-0.18065, -0.89117, -0.41615), FVector(140, 50, 350) + FVector(-(*imageWith*0.5 - cameraMatrix[0][2]) / 100, (*imageHeight*0.5 - cameraMatrix[1][2]) / 100, 0));
+	FMatrix matrix = FMatrix(FVector(0.98007, -0.19867, 0), FVector(-0.08268, -0.40785, 0.90930), FVector(-0.18065, -0.89117, -0.41615), FVector(140, 50, 350));
 	planeTransform.SetFromMatrix(matrix);
 
 
 	planeTransform.SetScale3D(FVector(1, 1, 1));
-	;
-	//planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2)));
+	
+	//planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2))); <- in die Matrix mit tVec.at anstatt feste werte
 
 	//open cv Koordinatensystem in unreal
 	CameraAdditionalRotation.SetFromMatrix(FMatrix(FVector(0, 1, 0), FVector(0, 0, -1), FVector(1, 0, 0), FVector(0, 0, 0)));
 
 	planeTransform = planeTransform * CameraAdditionalRotation;
-	planeTransform.SetLocation(planeTransform.GetLocation() + FVector(0, 0, 40));
+	planeTransform.SetLocation(planeTransform.GetLocation() + FVector(0, 0, 0));
 
 
 	cube->SetRelativeTransform(planeTransform);
