@@ -43,7 +43,7 @@ void AWebcamReader::BeginPlay()
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
 
 	// Open the stream
-	stream.open(RelativeContentPathString + "NewMarkerPic.mp4"); //mit webcam hier einfach "CameraID" in die klammern
+	stream.open(RelativeContentPathString + "StaudamVid.mp4"); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
@@ -64,7 +64,7 @@ void AWebcamReader::BeginPlay()
 		UpdateTexture();
 		OnNextVideoFrame();
 
-		LoadConfigFile();
+		LoadConfigFiles();
 		CalculateAndSetFOV();
 	}
 	else
@@ -194,16 +194,13 @@ void AWebcamReader::CalculateAndSetFOV()
 	mat.create(3, 3, CV_64F);
 	mat.setTo(0.0);
 	mat.at<float>(0, 0) = cameraMatrix[0][0];
-	mat.at<float>(0, 2) = *imageWith*0.5; //cameraMatrix[0][2];
+	mat.at<float>(0, 2) = *imageWith*0.5; 
 	mat.at<float>(1, 1) = cameraMatrix[1][1];
-	mat.at<float>(1, 2) = *imageHeight*0.5; //cameraMatrix[1][2];
-	mat.at<float>(2, 2) = 1.0; // cameraMatrix[2][2];
+	mat.at<float>(1, 2) = *imageHeight*0.5; 
+	mat.at<float>(2, 2) = 1.0; 
 
-							   //cv::calibrationMatrixValues(mat, cv::Size(*imageWith, *imageHeight), 0, 0, fovx, fovy, focalLenght, *principalPoint, aspectRatio);
-							   /*fovx = (2 * FMath::Atan(1920 / (2 * 3375.35)))*180/PI;
-							   fovy = (2 * FMath::Atan(1080 / (2 * 3411.35))) * 180 / PI;*/
-	double u0 = *imageWith*0.5; //cameraMatrix[0][2];
-	double v0 = *imageHeight*0.5; //cameraMatrix[1][2];
+	double u0 = *imageWith*0.5; 
+	double v0 = *imageHeight*0.5; 
 	double fx = cameraMatrix[0][0];
 	double fy = cameraMatrix[1][1];
 	fovx = (FMath::Atan2(u0, fx) + FMath::Atan2(*imageWith - u0, fx)) * 180.0 / PI;
@@ -211,77 +208,147 @@ void AWebcamReader::CalculateAndSetFOV()
 
 	float aspec = *imageWith / *imageHeight;
 
-
-
 	cam->SetFieldOfView(fovx);
-
-	/*fovx = (double) FMath::Atan2(2 * cameraMatrix[0][0], *imageWith)* 180.0 / PI;
-	fovy = (double)FMath::Atan2(2 * cameraMatrix[1][1], *imageHeight)*180.0/PI;*/
-	UE_LOG(LogTemp, Warning, TEXT("fovx: %f"), fovx);
-	UE_LOG(LogTemp, Warning, TEXT("fovy: %f"), fovy);
 
 	if (cam)
 	{
-
 		ResizeBillboard();
 		EstimatePosition();
-
 	}
-
-
 
 }
 
-void AWebcamReader::LoadConfigFile()
+void AWebcamReader::LoadConfigFiles()
 {
-	////Iller Video
-	//*imageWith = 1920;
-	//*imageHeight = 1080;
+	
+	FString path = FPaths::GetPath(FPaths::GetProjectFilePath()); //<-- beim Build vll anderen pfad?
+	string Path = TCHAR_TO_UTF8(*path);
 
-	////temp cameramatrix für Iller
-	//cameraMatrix[0][0] = 3375.38;
-	//cameraMatrix[0][1] = 0;
-	//cameraMatrix[0][2] = 966.988;
-	//cameraMatrix[1][0] = 0;
-	//cameraMatrix[1][1] = 3411.35;
-	//cameraMatrix[1][2] = 649.654;
-	//cameraMatrix[2][0] = 0;
-	//cameraMatrix[2][1] = 0;
-	//cameraMatrix[2][2] = 1.0f;
+#pragma region XML erstellen
+	//Camera Calibration
+	/*string filename_CamCal = "/CamCalibration.xml";
 
-	////temp camera distortion
-	//cameraDistortion[0] = 0.0111965;
-	//cameraDistortion[1] = 0.175178;
-	//cameraDistortion[2] = 3.13673;
-	//cameraDistortion[3] = 0.0091511;
-	//cameraDistortion[4] = 0.00573227;
+	cv::FileStorage fs_camMat(Path.append(filename_CamCal), FileStorage::WRITE);
 
+	int wWidth = 1920;
+	int wHeight = 1080;
 
-	//Marker Bild
-	*imageWith = 1280;
-	*imageHeight = 720;
+	cv::Mat wCamMatrix;
+	wCamMatrix.create(3, 3, CV_64F);
+	wCamMatrix.setTo(0.0f);
+	wCamMatrix.at<float>(0, 0) = 3.4099954023400387e+03;
+	wCamMatrix.at<float>(0, 2) = 960;
+	wCamMatrix.at<float>(1, 1) = 3.4099954023400387e+03;
+	wCamMatrix.at<float>(1, 2) = 540;
+	wCamMatrix.at<float>(2, 2) = 1.0;
 
-	//old camera matrix für marker:
-	/*cameraMatrix[0][0] = 969.422;
-	cameraMatrix[0][1] = 0;
-	cameraMatrix[0][2] = 621.848;
-	cameraMatrix[1][0] = 0;
-	cameraMatrix[1][1] = 976.801;
-	cameraMatrix[1][2] = 369.637;
-	cameraMatrix[2][0] = 0;
-	cameraMatrix[2][1] = 0;
-	cameraMatrix[2][2] = 1.0f;*/
+	cv::Mat wDistMatrix;
+	wDistMatrix.create(1, 5, CV_64F);
+	wDistMatrix.setTo(0.0f);
+	wDistMatrix.at<float>(0, 0) = 0.0111965;
+	wDistMatrix.at<float>(0, 1) = 0.175178;
+	wDistMatrix.at<float>(0, 2) = 3.13673;
+	wDistMatrix.at<float>(0, 3) = 0.0091511;
+	wDistMatrix.at<float>(0, 4) = 0.00573227;
 
-	//camera Matrix für Marker bild mit pr. point genau in der mitte
-	cameraMatrix[0][0] = 969.422;
-	cameraMatrix[0][1] = 0;
-	cameraMatrix[0][2] = 640;
-	cameraMatrix[1][0] = 0;
-	cameraMatrix[1][1] = 969.422;
-	cameraMatrix[1][2] = 360;
-	cameraMatrix[2][0] = 0;
-	cameraMatrix[2][1] = 0;
-	cameraMatrix[2][2] = 1.0f;
+	fs_camMat << "ImageWidth" << wWidth;
+	fs_camMat << "ImageHeight" << wHeight;
+	fs_camMat << "CameraMatrix" << wCamMatrix;
+	fs_camMat << "DistortionMatrix" << wDistMatrix;
+
+	fs_camMat.release();
+*/
+	//R und T Vector
+	/*string filename_RT = "/rtVectors.xml";
+	cv::FileStorage fs_rtVec(Path.append(filename_RT), FileStorage::WRITE);
+
+	cv::Mat Rvec;
+	Rvec.create(1, 3, CV_64F);
+	Rvec.at<float>(0, 0) = 1.697740754667221;
+	Rvec.at<float>(0, 1) = 0.08271544218127355;
+	Rvec.at<float>(0, 2) = -0.02180714106396032;
+
+	cv::Mat Tvec;
+	Tvec.create(1, 3, CV_64F);
+	Tvec.at<float>(0, 0) = -339.6517685150949;
+	Tvec.at<float>(0, 1) = -41.872098690714;
+	Tvec.at<float>(0, 2) = 2091.52018739509;
+
+	fs_rtVec << "R" << Rvec;
+	fs_rtVec << "T" << Tvec;
+
+	fs_rtVec.release();*/
+
+#pragma endregion
+
+	cv::FileStorage fs;
+
+	//Load Camera Calibration
+	string filename_Calib = "/CamCalibration.xml";
+	string calibPath = Path; calibPath = calibPath.append(filename_Calib);
+
+	fs.open(calibPath, FileStorage::READ);
+
+	fs["ImageWidth"] >> *imageWith;
+	fs["ImageHeight"] >> *imageHeight;
+
+	cv::Mat rCameraMatrix;
+	fs["CameraMatrix"] >> rCameraMatrix;
+
+	cv::Mat rDistortionMatrix;
+	fs["DistortionMatrix"] >> rDistortionMatrix;
+
+	// cameramatrix für Iller
+	cameraMatrix[0][0] = rCameraMatrix.at<float>(0, 0);
+	cameraMatrix[0][1] = rCameraMatrix.at<float>(0, 1);
+	cameraMatrix[0][2] = rCameraMatrix.at<float>(0, 2);
+	cameraMatrix[1][0] = rCameraMatrix.at<float>(1, 0);
+	cameraMatrix[1][1] = rCameraMatrix.at<float>(1, 1);
+	cameraMatrix[1][2] = rCameraMatrix.at<float>(1, 2);
+	cameraMatrix[2][0] = rCameraMatrix.at<float>(2, 0);
+	cameraMatrix[2][1] = rCameraMatrix.at<float>(2, 1);
+	cameraMatrix[2][2] = rCameraMatrix.at<float>(2, 2);
+
+	// camera distortion
+	cameraDistortion[0] = rDistortionMatrix.at<float>(0, 0);
+	cameraDistortion[1] = rDistortionMatrix.at<float>(0, 1);
+	cameraDistortion[2] = rDistortionMatrix.at<float>(0, 2);
+	cameraDistortion[3] = rDistortionMatrix.at<float>(0, 3);
+	cameraDistortion[4] = rDistortionMatrix.at<float>(0, 4);
+
+	fs.release();
+
+	//Load RT Vecotrs
+	string filename_RT = "/rtVectors.xml";
+	string rtPath = Path; rtPath = rtPath.append(filename_RT);
+
+	fs.open(rtPath, FileStorage::READ);
+
+	cv::Mat rotMatrix = cv::Mat(3,3, CV_64F);
+	cv::Mat rotVec = cv::Mat(1,3,CV_64F);
+	fs["R"] >> rotVec;
+	cv::Rodrigues(rotVec, rotMatrix);
+	UE_LOG(LogTemp, Warning, TEXT("RotVector: %f %f %f"), rotVec.at<float>(0,0), rotVec.at<float>(0, 1), rotVec.at<float>(0, 2));
+
+	rotationMatrix[0][0] = rotMatrix.at<float>(0, 0);
+	rotationMatrix[0][1] = rotMatrix.at<float>(0, 1);
+	rotationMatrix[0][2] = rotMatrix.at<float>(0, 2);
+	rotationMatrix[1][0] = rotMatrix.at<float>(1, 0);
+	rotationMatrix[1][1] = rotMatrix.at<float>(1, 1);
+	rotationMatrix[1][2] = rotMatrix.at<float>(1, 2);
+	rotationMatrix[2][0] = rotMatrix.at<float>(2, 0);
+	rotationMatrix[2][1] = rotMatrix.at<float>(2, 1);
+	rotationMatrix[2][2] = rotMatrix.at<float>(2, 2);
+
+	cv::Mat tVec;
+	fs["T"] >> tVec;
+
+	translationVector[0] = tVec.at<float>(0, 0);
+	translationVector[1] = tVec.at<float>(0, 1);
+	translationVector[2] = tVec.at<float>(0, 2);
+
+	fs.release();
+
 
 
 }
@@ -302,53 +369,27 @@ void AWebcamReader::ResizeBillboard()
 
 void AWebcamReader::EstimatePosition()
 {
-	cv::Mat_<float> Rvec;
-	cv::Mat_<float> Tvec;
-	cv::Mat raux, taux;
-
-	//Später mit übergabeparametern berechnen
-	//if (!cv::solvePnP(points3d, points2d, camMatrix, disCoeff, raux, taux)) return;
-
-	/*raux.convertTo(Rvec, CV_32F);
-	taux.convertTo(Tvec, CV_32F);
-
-	cv::Mat_<float> rotMat(3, 3);
-	cv::Rodrigues(Rvec, rotMat);*/
-
-	//den Cube/das Object mit übergeben um die transform ändern zu können?
-
-	/*float rArray[9] = { 0.98007, -0.08268, -0.18065
-	- 0.19867, -0.40785, -0.89117,
-	0.00000, 0.90930, -0.41615 };*/
-	float rArray[9] = { 1, 0, 0
-		,0, 1, 0,
-		0.00000, 0, 1 };
-	//opencv(x,y,z) =  unreal(z,x,-y)
-	//float tArray[3] = { 140, 50, 350 };
-	float tArray[3] = { 350, 140, -50 };
-
-	cv::Mat rotMat = Mat(3, 3, CV_32FC1, rArray);
-	cv::Mat tVec = Mat(1, 3, CV_32FC1, tArray);
-
-	cv::Rodrigues(rotMat, Rvec);
-
 
 
 	planeTransform = FTransform();
 
-	FMatrix matrix = FMatrix(FVector(0.98007, -0.19867, 0), FVector(-0.08268, -0.40785, 0.90930), FVector(-0.18065, -0.89117, -0.41615), FVector(140, 50, 350));
+
+	UE_LOG(LogTemp, Warning, TEXT("Vector 1: %f %f %f"), rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]);
+	UE_LOG(LogTemp, Warning, TEXT("Vector 2: %f %f %f"), rotationMatrix[0][1], rotationMatrix[1][1], rotationMatrix[2][1]);
+	UE_LOG(LogTemp, Warning, TEXT("Vector 3: %f %f %f"), rotationMatrix[0][2], rotationMatrix[1][2], rotationMatrix[2][2]);
+	
+	FMatrix matrix = FMatrix(FVector(rotationMatrix[0][0], rotationMatrix[1][0], rotationMatrix[2][0]), FVector(rotationMatrix[0][1], rotationMatrix[1][1], rotationMatrix[2][1]), FVector(rotationMatrix[0][2], rotationMatrix[1][2], rotationMatrix[2][2]), FVector(translationVector[0], translationVector[1], translationVector[2]));
+	//FMatrix matrix = FMatrix(FVector(0,0 ,0 ), FVector(0,0 ,0 ), FVector(0,0 ,0 ), FVector(-339.6517685150949, -41.872098690714, 2091.52018739509));
 	planeTransform.SetFromMatrix(matrix);
 
 
 	planeTransform.SetScale3D(FVector(1, 1, 1));
 	
-	//planeTransform.SetLocation(FVector(tVec.at<float>(0, 0), tVec.at<float>(0, 1), tVec.at<float>(0, 2))); <- in die Matrix mit tVec.at anstatt feste werte
 
 	//open cv Koordinatensystem in unreal
 	CameraAdditionalRotation.SetFromMatrix(FMatrix(FVector(0, 1, 0), FVector(0, 0, -1), FVector(1, 0, 0), FVector(0, 0, 0)));
 
 	planeTransform = planeTransform * CameraAdditionalRotation;
-	planeTransform.SetLocation(planeTransform.GetLocation() + FVector(0, 0, 0));
 
 
 	cube->SetRelativeTransform(planeTransform);

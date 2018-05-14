@@ -105,6 +105,9 @@ public:
 	int* imageWith = new int; //ohne pointer hats hier immer bugs gegeben
 	int* imageHeight = new int;
 
+	float rotationMatrix[3][3];
+	float translationVector[3];
+
 	cv::Point2d* principalPoint = new cv::Point2d;
 	double fovx;
 	double fovy;
@@ -126,7 +129,7 @@ public:
 
 	void CalculateAndSetFOV();
 
-	void LoadConfigFile();
+	void LoadConfigFiles();
 
 	void ResizeBillboard();
 
