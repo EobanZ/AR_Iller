@@ -100,13 +100,13 @@ public:
 
 
 	//Calculate FOV
-	float cameraMatrix[2][2];
-	float cameraDistortion[5];
+	double cameraMatrix[3][3];
+	double cameraDistortion[5];
 	int* imageWith = new int; //ohne pointer hats hier immer bugs gegeben
 	int* imageHeight = new int;
 
-	float rotationMatrix[3][3];
-	float translationVector[3];
+	double rotationMatrix[3][3];
+	double translationVector[3];
 
 	cv::Point2d* principalPoint = new cv::Point2d;
 	double fovx;
