@@ -432,7 +432,7 @@ void AWebcamReader::EstimatePosition()
 	planeTransform = planeTransform * CameraAdditionalRotation;
 
 
-	cube->SetRelativeTransform(planeTransform);
+	//cube->SetRelativeTransform(planeTransform);
 
 	ground->SetActorTransform(planeTransform);
 
