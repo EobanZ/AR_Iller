@@ -418,6 +418,10 @@ Cv64suf;
 #  endif
 #endif
 
+#ifndef CV_OVERRIDE
+# define CV_OVERRIDE override
+#endif
+
 
 /****************************************************************************************\
 *                                    C++ Move semantics                                  *

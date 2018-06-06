@@ -2,11 +2,15 @@
 
 #pragma once
 
+#include <stdio.h>
+#include <iostream>
+
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/calib3d.hpp"
+
 
 #include "Engine/Texture2D.h"
 #include "Runtime/Engine/Classes/Camera/CameraComponent.h"
@@ -14,12 +18,20 @@
 #include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
 #include "Runtime/Core/Public/Math/UnrealMathUtility.h"
 
+#include "opencv2/features2d.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/xfeatures2d.hpp"
+#include <opencv2/opencv.hpp>
+#include <opencv2/tracking.hpp>
+
 #include "Ground.h"
 
 #include "Runtime/Engine/Classes/Engine/StaticMeshActor.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WebcamReader.generated.h"
+
+using namespace cv::xfeatures2d;
 
 UCLASS()
 class ARILLER_API AWebcamReader : public APawn
@@ -45,10 +57,6 @@ public:
 	// The operation that will be applied to every frame
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
 		int32 OperationMode;
-
-	// If the webcam images should be resized every frame
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-		bool ShouldResize;
 
 	// The targeted resize width and height (width, height)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
@@ -146,6 +154,13 @@ public:
 
 	void SetGroundActorReference(AGround* goundActor);
 
+	//Tracking
+
+	cv::Rect2d* bbox;
+
+	void FindImageWithSURF();
+
+	void Track();
 
 
 protected:

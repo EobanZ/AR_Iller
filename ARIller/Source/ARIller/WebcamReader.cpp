@@ -22,7 +22,6 @@ AWebcamReader::AWebcamReader()
 	RefreshRate = 50;
 	isStreamOpen = false;
 	VideoSize = FVector2D(0, 0);
-	ShouldResize = false;
 	ResizeDeminsions = FVector2D(1920, 1080);
 	RefreshTimer = 0.0f;
 	stream = cv::VideoCapture();
@@ -66,6 +65,8 @@ void AWebcamReader::BeginPlay()
 
 		LoadConfigFiles();
 		CalculateAndSetFOV();
+
+		FindImageWithSURF();
 	}
 	else
 	{
@@ -107,10 +108,6 @@ void AWebcamReader::UpdateFrame()
 	if (stream.isOpened())
 	{
 		stream.read(frame);
-		if (ShouldResize)
-		{
-			cv::resize(frame, frame, size);
-		}
 	}
 	else
 	{
@@ -240,6 +237,83 @@ void AWebcamReader::SetCubeReference(UStaticMeshComponent * cubeComponent)
 void AWebcamReader::SetGroundActorReference(AGround* goundActor)
 {
 	ground = goundActor;
+}
+
+void AWebcamReader::FindImageWithSURF()
+{
+	FString RelativeContentPath = FPaths::GameContentDir();
+	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
+
+	//Load Image to search for
+	cv::Mat targetImage;
+	targetImage = cv::imread(RelativeContentPathString + "Staudam_TrackPic.png");
+
+	//Read Video
+	VideoCapture video(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
+
+	//Read first frame
+	Mat videoframe;
+	bool ok = video.read(videoframe);
+
+	//Detect the keypoints 
+	std::vector<KeyPoint> keypoints_1, keypoints_2;
+	cv::Mat img_keypoints_1, img_keypoints_2;
+	int minHessian = 400;
+
+	Ptr<SURF> detector = SURF::create();
+	detector->setHessianThreshold(minHessian);
+
+	detector->detectAndCompute(videoframe, Mat(), keypoints_2, img_keypoints_2);
+	detector->detectAndCompute(targetImage, Mat(), keypoints_1, img_keypoints_1);
+
+	//Matching descriptor vectors using FLANN matcher
+	FlannBasedMatcher matcher;
+	std::vector< DMatch > matches;
+	matcher.match(img_keypoints_1, img_keypoints_2, matches);
+	double max_dist = 0; double min_dist = 100;
+
+	//Calculation of max and min distances between keypoints
+	for (int i = 0; i < img_keypoints_1.rows; i++)
+	{
+		double dist = matches[i].distance;
+		if (dist < min_dist) min_dist = dist;
+		if (dist > max_dist) max_dist = dist;
+	}
+
+	//Finde good matches
+	std::vector< DMatch > good_matches;
+	for (int i = 0; i < img_keypoints_1.rows; i++)
+	{
+		if (matches[i].distance <= 3 * min_dist)
+		{
+			good_matches.push_back(matches[i]);
+		}
+	}
+
+	//Localize the object
+	std::vector<Point2f> obj;
+	std::vector<Point2f> scene;
+	for (size_t i = 0; i < good_matches.size(); i++)
+	{
+		//-- Get the keypoints from the good matches
+		obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+		scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+	}
+
+	Mat H = findHomography(obj, scene, RANSAC);
+
+	std::vector<Point2f> obj_corners(4);
+	obj_corners[0] = cvPoint(0, 0);
+	obj_corners[1] = cvPoint(targetImage.cols, 0);
+	obj_corners[2] = cvPoint(targetImage.cols, targetImage.rows);
+	obj_corners[3] = cvPoint(0, targetImage.rows);
+
+	std::vector<Point2f> scene_corners(4);
+	perspectiveTransform(obj_corners, scene_corners, H);
+
+	//Create Rect2d Box for tracker
+	*bbox = cv::Rect(scene_corners[0].x, scene_corners[0].y, scene_corners[1].x - scene_corners[0].x, scene_corners[3].y - scene_corners[0].y);
+
 }
 
 void AWebcamReader::CalculateAndSetFOV()

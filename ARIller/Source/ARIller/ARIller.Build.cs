@@ -66,9 +66,13 @@ public class ARIller : ModuleRules
             //Add Static Libraries
             PublicAdditionalLibraries.Add("opencv_world341.lib");
 
+            PublicAdditionalLibraries.Add("opencv_xfeatures2d400.lib");
+
             //Add Dynamic Libraries
             PublicDelayLoadDLLs.Add("opencv_world341.dll");
             PublicDelayLoadDLLs.Add("opencv_ffmpeg341_64.dll");
+
+            PublicDelayLoadDLLs.Add("opencv_xfeatures2d400.dll");
         }
 
         Definitions.Add(string.Format("WITH_OPENCV_BINDING={0}", isLibrarySupported ? 1 : 0));
