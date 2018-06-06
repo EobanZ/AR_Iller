@@ -66,7 +66,7 @@ void AWebcamReader::BeginPlay()
 		LoadConfigFiles();
 		CalculateAndSetFOV();
 
-		FindImageWithSURF();
+		//FindImageWithSURF();
 	}
 	else
 	{
@@ -312,7 +312,7 @@ void AWebcamReader::FindImageWithSURF()
 	perspectiveTransform(obj_corners, scene_corners, H);
 
 	//Create Rect2d Box for tracker
-	*bbox = cv::Rect(scene_corners[0].x, scene_corners[0].y, scene_corners[1].x - scene_corners[0].x, scene_corners[3].y - scene_corners[0].y);
+	bbox = cv::Rect(scene_corners[0].x, scene_corners[0].y, scene_corners[1].x - scene_corners[0].x, scene_corners[3].y - scene_corners[0].y);
 
 }
 
