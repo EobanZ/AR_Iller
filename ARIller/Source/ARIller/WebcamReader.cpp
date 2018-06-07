@@ -66,7 +66,7 @@ void AWebcamReader::BeginPlay()
 		LoadConfigFiles();
 		CalculateAndSetFOV();
 
-		//FindImageWithSURF();
+		FindImageWithSURF();
 	}
 	else
 	{
@@ -98,7 +98,7 @@ void AWebcamReader::Tick(float DeltaTime)
 void AWebcamReader::ChangeOperation()
 {
 	OperationMode++;
-	OperationMode %= 3;
+	OperationMode %= 2;
 }
 
 
@@ -128,16 +128,6 @@ void AWebcamReader::DoProcessing()
 		// Apply median blur
 		cv::Mat src = frame.clone();
 		cv::medianBlur(src, frame, 7);
-	}
-	else if (OperationMode == 2)
-	{
-		cv::Mat src, dst;
-		cv::cvtColor(frame, src, cv::COLOR_RGB2GRAY);
-
-		int thresh = 50;
-
-		cv::Canny(src, dst, thresh, thresh * 2, 3);
-		cv::cvtColor(dst, frame, cv::COLOR_GRAY2BGR);
 	}
 }
 
@@ -249,70 +239,83 @@ void AWebcamReader::FindImageWithSURF()
 	targetImage = cv::imread(RelativeContentPathString + "Staudam_TrackPic.png");
 
 	//Read Video
-	VideoCapture video(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
+	VideoCapture* video = new VideoCapture(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
 
 	//Read first frame
-	Mat videoframe;
-	bool ok = video.read(videoframe);
+	Mat* videoframe = new Mat();
+	bool ok = video->read(*videoframe);
 
 	//Detect the keypoints 
-	std::vector<KeyPoint> keypoints_1, keypoints_2;
+	std::vector<KeyPoint>* keypoints_1 = new std::vector<KeyPoint>();
+	std::vector<KeyPoint>* keypoints_2 = new std::vector<KeyPoint>();
 	cv::Mat img_keypoints_1, img_keypoints_2;
 	int minHessian = 400;
 
 	Ptr<SURF> detector = SURF::create();
 	detector->setHessianThreshold(minHessian);
 
-	detector->detectAndCompute(videoframe, Mat(), keypoints_2, img_keypoints_2);
-	detector->detectAndCompute(targetImage, Mat(), keypoints_1, img_keypoints_1);
-
-	//Matching descriptor vectors using FLANN matcher
-	FlannBasedMatcher matcher;
-	std::vector< DMatch > matches;
-	matcher.match(img_keypoints_1, img_keypoints_2, matches);
-	double max_dist = 0; double min_dist = 100;
-
-	//Calculation of max and min distances between keypoints
-	for (int i = 0; i < img_keypoints_1.rows; i++)
-	{
-		double dist = matches[i].distance;
-		if (dist < min_dist) min_dist = dist;
-		if (dist > max_dist) max_dist = dist;
+	if (!detector) {
+		UE_LOG(LogTemp, Error, TEXT("surf detector is null"));
 	}
+	if(!videoframe)
+		UE_LOG(LogTemp, Error, TEXT("Videoframe is null"));
+	if(!video)
+		UE_LOG(LogTemp, Error, TEXT("VideoCapture is null"));
+	if(!keypoints_2)
+		UE_LOG(LogTemp, Error, TEXT("VideoCapture is null"));
 
-	//Finde good matches
-	std::vector< DMatch > good_matches;
-	for (int i = 0; i < img_keypoints_1.rows; i++)
-	{
-		if (matches[i].distance <= 3 * min_dist)
-		{
-			good_matches.push_back(matches[i]);
-		}
-	}
+	detector->detect(*videoframe, *keypoints_2);
+	detector->compute(*videoframe, *keypoints_2, img_keypoints_2);
+	//detector->detectAndCompute(frame, Mat(), keypoints_2, img_keypoints_2);
+	//detector->detectAndCompute(targetImage, Mat(), keypoints_1, img_keypoints_1);
 
-	//Localize the object
-	std::vector<Point2f> obj;
-	std::vector<Point2f> scene;
-	for (size_t i = 0; i < good_matches.size(); i++)
-	{
-		//-- Get the keypoints from the good matches
-		obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
-		scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
-	}
+	////Matching descriptor vectors using FLANN matcher
+	//FlannBasedMatcher matcher;
+	//std::vector< DMatch > matches;
+	//matcher.match(img_keypoints_1, img_keypoints_2, matches);
+	//double max_dist = 0; double min_dist = 100;
 
-	Mat H = findHomography(obj, scene, RANSAC);
+	////Calculation of max and min distances between keypoints
+	//for (int i = 0; i < img_keypoints_1.rows; i++)
+	//{
+	//	double dist = matches[i].distance;
+	//	if (dist < min_dist) min_dist = dist;
+	//	if (dist > max_dist) max_dist = dist;
+	//}
 
-	std::vector<Point2f> obj_corners(4);
-	obj_corners[0] = cvPoint(0, 0);
-	obj_corners[1] = cvPoint(targetImage.cols, 0);
-	obj_corners[2] = cvPoint(targetImage.cols, targetImage.rows);
-	obj_corners[3] = cvPoint(0, targetImage.rows);
+	////Finde good matches
+	//std::vector< DMatch > good_matches;
+	//for (int i = 0; i < img_keypoints_1.rows; i++)
+	//{
+	//	if (matches[i].distance <= 3 * min_dist)
+	//	{
+	//		good_matches.push_back(matches[i]);
+	//	}
+	//}
 
-	std::vector<Point2f> scene_corners(4);
-	perspectiveTransform(obj_corners, scene_corners, H);
+	////Localize the object
+	//std::vector<Point2f> obj;
+	//std::vector<Point2f> scene;
+	//for (size_t i = 0; i < good_matches.size(); i++)
+	//{
+	//	//-- Get the keypoints from the good matches
+	//	obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+	//	scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+	//}
 
-	//Create Rect2d Box for tracker
-	bbox = cv::Rect(scene_corners[0].x, scene_corners[0].y, scene_corners[1].x - scene_corners[0].x, scene_corners[3].y - scene_corners[0].y);
+	//Mat H = findHomography(obj, scene, RANSAC);
+
+	//std::vector<Point2f> obj_corners(4);
+	//obj_corners[0] = cvPoint(0, 0);
+	//obj_corners[1] = cvPoint(targetImage.cols, 0);
+	//obj_corners[2] = cvPoint(targetImage.cols, targetImage.rows);
+	//obj_corners[3] = cvPoint(0, targetImage.rows);
+
+	//std::vector<Point2f> scene_corners(4);
+	//perspectiveTransform(obj_corners, scene_corners, H);
+
+	////Create Rect2d Box for tracker
+	//bbox = cv::Rect(scene_corners[0].x, scene_corners[0].y, scene_corners[1].x - scene_corners[0].x, scene_corners[3].y - scene_corners[0].y);
 
 }
 
