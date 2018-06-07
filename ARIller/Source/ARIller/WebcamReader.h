@@ -156,7 +156,7 @@ public:
 
 	//Tracking
 
-	cv::Rect2d bbox;
+	cv::Rect2d* bbox;
 
 	void FindImageWithSURF();
 
