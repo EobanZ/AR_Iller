@@ -18,7 +18,7 @@ AWebcamReader::AWebcamReader()
 
 	// Initialize OpenCV and webcam properties
 	CameraID = 0;
-	OperationMode = 0;
+	OperationMode = 1;
 	RefreshRate = 50;
 	isStreamOpen = false;
 	VideoSize = FVector2D(0, 0);
@@ -125,9 +125,7 @@ void AWebcamReader::DoProcessing()
 	}
 	else if (OperationMode == 1)
 	{
-		// Apply median blur
-		cv::Mat src = frame.clone();
-		cv::medianBlur(src, frame, 7);
+		Track(); // Hier vll paar frames skippen
 	}
 }
 
@@ -238,12 +236,12 @@ void AWebcamReader::FindImageWithSURF()
 	cv::Mat* targetImage = new cv::Mat();
 	*targetImage = cv::imread(RelativeContentPathString + "StaudamTargetPic.PNG");
 
-	//Read Video
-	VideoCapture* video = new VideoCapture(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
+	////Read Video
+	//VideoCapture* video = new VideoCapture(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
 
-	//Read first frame
-	cv::Mat* videoframe = new cv::Mat();
-	bool ok = video->read(*videoframe);
+	////Read first frame
+	//cv::Mat* videoframe = new cv::Mat();
+	//bool ok = video->read(*videoframe);
 
 	//Detect the keypoints 
 	std::vector<KeyPoint>* keypoints_1 = new std::vector<KeyPoint>();
@@ -252,10 +250,10 @@ void AWebcamReader::FindImageWithSURF()
 	cv::Mat* img_keypoints_2 = new cv::Mat();
 	int minHessian = 400;
 
-	Ptr<SURF> detector = SURF::create();
+	cv::Ptr<SURF> detector = SURF::create();
 	detector->setHessianThreshold(minHessian);
 
-	detector->detectAndCompute(*videoframe, Mat(), *keypoints_2, *img_keypoints_2);
+	detector->detectAndCompute(frame, Mat(), *keypoints_2, *img_keypoints_2);
 	detector->detectAndCompute(*targetImage, Mat(), *keypoints_1, *img_keypoints_1);
 
 	//Matching descriptor vectors using FLANN matcher
@@ -308,6 +306,33 @@ void AWebcamReader::FindImageWithSURF()
 	if (bbox)
 		delete bbox;
 	bbox = new cv::Rect2d(scene_corners->at(0).x, scene_corners->at(0).y, scene_corners->at(1).x - scene_corners->at(0).x, scene_corners->at(3).y - scene_corners->at(0).y);	
+
+}
+
+void AWebcamReader::Track()
+{
+	FVector deltaVector = FVector(0, 0, 0);
+
+	double oldCenterX, oldCenterY, newCenterX, newCenterY;
+
+	oldCenterX = bbox->x + bbox->width / 2;
+	oldCenterY = bbox->y + bbox->height / 2;
+
+	//update bounding box
+	static bool wasInit = false;
+	if (!wasInit)
+		wasInit = tracker->init(frame, *bbox);
+	else 	
+		tracker->update(frame, *bbox);
+
+	
+			
+	//Move groundplane
+	newCenterX = bbox->x + bbox->width / 2;
+	newCenterY = bbox->y + bbox->height / 2;
+
+	deltaVector = FVector(newCenterX - oldCenterX, newCenterY - oldCenterY, 0);
+	ground->SetActorLocation(ground->GetActorLocation() + (deltaVector));
 
 }
 

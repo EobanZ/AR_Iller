@@ -52,31 +52,31 @@ public:
 
 	// The device ID opened by the Video Stream
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-		int32 CameraID;
+	int32 CameraID;
 
 	// The operation that will be applied to every frame
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-		int32 OperationMode;
+	int32 OperationMode;
 
 	// The targeted resize width and height (width, height)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-		FVector2D ResizeDeminsions;
+	FVector2D ResizeDeminsions;
 
 	// The rate at which the color data array and video texture is updated (in frames per second)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-		float RefreshRate;
+	float RefreshRate;
 
 	// The refresh timer
 	UPROPERTY(BlueprintReadWrite, Category = Webcam)
-		float RefreshTimer;
+	float RefreshTimer;
 
 	// Blueprint Event called every time the video frame is updated
 	UFUNCTION(BlueprintImplementableEvent, Category = Webcam)
-		void OnNextVideoFrame();
+	void OnNextVideoFrame();
 
 	// Change OpenCV operation that will be applied to every frame
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Change Operations", Keywords = "Change Operation"), Category = Webcam)
-		void ChangeOperation();
+	void ChangeOperation();
 
 
 
@@ -92,19 +92,19 @@ public:
 
 	// If the stream has succesfully opened yet
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
-		bool isStreamOpen;
+	bool isStreamOpen;
 
 	// The videos width and height (width, height)
 	UPROPERTY(BlueprintReadWrite, Category = Webcam)
-		FVector2D VideoSize;
+	FVector2D VideoSize;
 
 	// The current video frame's corresponding texture
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
-		UTexture2D* VideoTexture;
+	UTexture2D* VideoTexture;
 
 	// The current data array
 	UPROPERTY(BlueprintReadOnly, Category = Webcam)
-		TArray<FColor> Data;
+	TArray<FColor> Data;
 
 
 	//Calculate FOV
@@ -128,10 +128,9 @@ public:
 	UStaticMeshComponent* cube;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
-		AGround* ground;
+	AGround* ground;
 
 	FTransform planeTransform;
-
 
 	FTransform CameraAdditionalRotation;
 
@@ -144,19 +143,20 @@ public:
 	void EstimatePosition();
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Reference", Keywords = "Set Camera Reference"), Category = Webcam)
-		void SetCameraReference(UCameraComponent* cameraComponent);
+	void SetCameraReference(UCameraComponent* cameraComponent);
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Billboard Reference", Keywords = "Set Billboard Reference"), Category = Webcam)
-		void SetBillboardReference(UStaticMeshComponent* billboardComponent);
+	void SetBillboardReference(UStaticMeshComponent* billboardComponent);
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Cube Reference", Keywords = "Set Cube Reference"), Category = Webcam)
-		void SetCubeReference(UStaticMeshComponent* cubeComponent);
+	void SetCubeReference(UStaticMeshComponent* cubeComponent);
 
 	void SetGroundActorReference(AGround* goundActor);
 
 	//Tracking
 
-	cv::Rect2d* bbox;
+	cv::Rect2d* bbox; //Box wird durch den Tracker geupdated
+	cv::Ptr<cv::Tracker> tracker = cv::TrackerMedianFlow::create();
 
 	void FindImageWithSURF();
 
