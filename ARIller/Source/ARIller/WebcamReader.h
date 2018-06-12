@@ -155,6 +155,7 @@ public:
 
 	//Tracking
 
+	float PixelToUnrealScale;
 	cv::Rect2d* bbox; //Box wird durch den Tracker geupdated
 	cv::Ptr<cv::Tracker> tracker = cv::TrackerMedianFlow::create();
 

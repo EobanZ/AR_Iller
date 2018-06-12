@@ -42,7 +42,7 @@ void AWebcamReader::BeginPlay()
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
 
 	// Open the stream
-	stream.open(RelativeContentPathString + "StaudamVid.mp4"); //mit webcam hier einfach "CameraID" in die klammern
+	stream.open(0); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
