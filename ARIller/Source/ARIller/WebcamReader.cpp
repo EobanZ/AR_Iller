@@ -27,6 +27,7 @@ AWebcamReader::AWebcamReader()
 	stream = cv::VideoCapture();
 	frame = cv::Mat();
 
+
 }
 
 // Called when the game starts or when spawned
@@ -42,7 +43,7 @@ void AWebcamReader::BeginPlay()
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
 
 	// Open the stream
-	stream.open(RelativeContentPathString + "StaudamVid.mp4"); //mit webcam hier einfach "CameraID" in die klammern
+	stream.open(RelativeContentPathString + "Iller_wackel.mp4"); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
@@ -58,24 +59,25 @@ void AWebcamReader::BeginPlay()
 		// Initialize data array
 		Data.Init(FColor(0, 0, 0, 255), VideoSize.X * VideoSize.Y);
 
-		// Do first frame
-		FindImageWithSURF();
-		DoProcessing();
-		UpdateTexture();
-		OnNextVideoFrame();
-
+		//Load ConfigFilles and set the FieldOfView
 		LoadConfigFiles();
 		CalculateAndSetFOV();
 
+		// Do first frame
+		
+		UpdateTexture();	
 		FindImageWithSURF();
+		DoProcessing();
+		OnNextVideoFrame();
+		
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Didnt open stream"));
-		std::cout << "Didnt open stream";
+	
 	}
 
-
+	
 
 }
 
@@ -127,7 +129,7 @@ void AWebcamReader::DoProcessing()
 	}
 	else if (OperationMode == 1)
 	{
-		Track(); // Hier vll paar frames skippen
+		Track(); 
 	}
 }
 
@@ -236,7 +238,7 @@ void AWebcamReader::FindImageWithSURF()
 
 	//Load Image to search for
 	cv::Mat* targetImage = new cv::Mat();
-	*targetImage = cv::imread(RelativeContentPathString + "StaudamTargetPic.PNG");
+	*targetImage = cv::imread(RelativeContentPathString + "targetPic_Wackel.PNG");
 
 	////Read Video
 	//VideoCapture* video = new VideoCapture(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
@@ -333,8 +335,40 @@ void AWebcamReader::Track()
 	newCenterX = bbox->x + bbox->width / 2;
 	newCenterY = bbox->y + bbox->height / 2;
 
-	deltaVector = FVector(0, newCenterX - oldCenterX, -1*(newCenterY - oldCenterY));
-	ground->SetActorLocation(ground->GetActorLocation() + (deltaVector*PixelToUnrealScale));
+	deltaVector = FVector(newCenterX - oldCenterX, newCenterY - oldCenterY, 0);
+	//deltaVector = FVector(0, 0, 0);
+
+	for (int i = 0; i < 4; i++)
+	{
+		initPoints.at(i).x += deltaVector.X;
+		initPoints.at(i).y += deltaVector.Y;
+	}
+
+	
+	//ground->SetActorLocation(ground->GetActorLocation() + (deltaVector * PixelToUnrealScale));
+
+	//write in matrix array
+	cv::Mat rotvec = cv::Mat(1, 3, CV_64F);
+	cv::Mat transvec = cv::Mat(1, 3, CV_64F);
+	cv::solvePnP(init3dPoints, initPoints, cv::Mat(3, 3, CV_64F, cameraMatrix), cv::Mat(1, 5, CV_64F, cameraDistortion), rotvec, transvec);
+
+	cv::Mat rotMat = cv::Mat(3, 3, CV_64F);
+	cv::Rodrigues(rotvec, rotMat);
+
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			rotationMatrix[i][j] = rotMat.at<double>(i, j);
+		}
+	}
+
+	for (int i = 0; i < 3; i++)
+	{
+		translationVector[i] = transvec.at<double>(i);
+	}
+
+	EstimatePosition();
 
 }
 
@@ -463,7 +497,7 @@ void AWebcamReader::LoadConfigFiles()
 
 	//Load RT Vecotrs
 	cv::FileStorage fs_rt;	
-	string filename_RT = "/rtVectors.xml";
+	string filename_RT = "/rtVectors_wackel.xml";
 	string rtPath = Path; rtPath = rtPath.append(filename_RT);
 
 	fs_rt.open(rtPath, FileStorage::READ);
@@ -491,6 +525,10 @@ void AWebcamReader::LoadConfigFiles()
 	translationVector[1] = tVec.at<double>(1, 0);
 	translationVector[2] = tVec.at<double>(2, 0);
 
+	fs_rt["InitPoints"] >> initPoints;
+
+	fs_rt["Init3DPoints"] >> init3dPoints;
+
 	fs_rt.release();
 
 }
@@ -505,8 +543,6 @@ void AWebcamReader::ResizeBillboard()
 
 	billboard->SetRelativeScale3D(FVector(0, width / 100.0, height / 100.0));
 
-	//get the Pixel to Unreal Unit Scale for tracking
-	PixelToUnrealScale = (float)(width)/VideoSize.X;
 
 }
 
