@@ -315,6 +315,7 @@ void AWebcamReader::FindImageWithSURF()
 
 void AWebcamReader::Track()
 {
+
 	FVector deltaVector = FVector(0, 0, 0);
 
 	double oldCenterX, oldCenterY, newCenterX, newCenterY;
@@ -324,8 +325,11 @@ void AWebcamReader::Track()
 
 	//update bounding box
 	static bool wasInit = false;
-	if (!wasInit)
+	if (!wasInit) 
+	{
 		wasInit = tracker->init(frame, *bbox);
+		wasInit = true;
+	}		
 	else 	
 		tracker->update(frame, *bbox);
 
@@ -335,8 +339,8 @@ void AWebcamReader::Track()
 	newCenterX = bbox->x + bbox->width / 2;
 	newCenterY = bbox->y + bbox->height / 2;
 
-	deltaVector = FVector(newCenterX - oldCenterX, newCenterY - oldCenterY, 0);
-	//deltaVector = FVector(0, 0, 0);
+	deltaVector = FVector((float)newCenterX - (float)oldCenterX, (float)newCenterY - (float)oldCenterY, 0);
+	deltaVector = FVector(0, 0, 0);
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -350,25 +354,39 @@ void AWebcamReader::Track()
 	//write in matrix array
 	cv::Mat rotvec = cv::Mat(1, 3, CV_64F);
 	cv::Mat transvec = cv::Mat(1, 3, CV_64F);
-	cv::solvePnP(init3dPoints, initPoints, cv::Mat(3, 3, CV_64F, cameraMatrix), cv::Mat(1, 5, CV_64F, cameraDistortion), rotvec, transvec);
 
-	cv::Mat rotMat = cv::Mat(3, 3, CV_64F);
-	cv::Rodrigues(rotvec, rotMat);
-
+	//cameraMatrix
+	cv::Mat camMat = cv::Mat(3, 3, CV_64F);
 	for (int i = 0; i < 3; i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
-			rotationMatrix[i][j] = rotMat.at<double>(i, j);
+			camMat.at<double>(i, j) = cameraMatrix[i][j];
 		}
 	}
 
-	for (int i = 0; i < 3; i++)
+	//distortion Matrix
+	cv::Mat distMat = cv::Mat(1, 5, CV_64F);
+	for (int i = 0; i < 5; i++)
 	{
-		translationVector[i] = transvec.at<double>(i);
+		distMat.at<double>(0, i) = cameraDistortion[i];
 	}
 
-	EstimatePosition();
+
+	cv::solvePnP(init3dPoints, initPoints, camMat, distMat, rotvec, transvec);
+
+	cv::Mat rotMat = cv::Mat(3, 3, CV_64F);
+	cv::Rodrigues(rotvec, rotMat);
+
+
+	FMatrix matrix = FMatrix(FVector((float)rotMat.at<double>(0,0), (float)rotMat.at<double>(1,0), (float)rotMat.at<double>(2,0)), FVector((float)rotMat.at<double>(0,1), (float)rotMat.at<double>(1,1), (float)rotMat.at<double>(2,1)), FVector((float)rotMat.at<double>(0,2), (float)rotMat.at<double>(1,2), (float)rotMat.at<double>(2,2)), FVector((float)transvec.at<double>(0), (float)transvec.at<double>(1), (float)transvec.at<double>(2)));
+
+	planeTransform.SetFromMatrix(matrix);
+	planeTransform.SetScale3D(FVector(1, 1, 1));
+
+	planeTransform = planeTransform * CameraAdditionalRotation;
+
+	ground->SetActorTransform(planeTransform);
 
 }
 
