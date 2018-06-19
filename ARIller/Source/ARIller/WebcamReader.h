@@ -155,8 +155,8 @@ public:
 
 	//Tracking
 
-	std::vector<cv::Point2f> initPoints;
-	std::vector<cv::Point3f> init3dPoints;
+	std::vector<cv::Point2f>* initPoints = new std::vector<cv::Point2f>();
+	std::vector<cv::Point3f>* init3dPoints = new std::vector<cv::Point3f>();
 
 	cv::Rect2d* bbox; //Box wird durch den Tracker geupdated
 	cv::Ptr<cv::Tracker> tracker = cv::TrackerMedianFlow::create();

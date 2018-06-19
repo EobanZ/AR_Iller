@@ -340,12 +340,12 @@ void AWebcamReader::Track()
 	newCenterY = bbox->y + bbox->height / 2;
 
 	deltaVector = FVector((float)newCenterX - (float)oldCenterX, (float)newCenterY - (float)oldCenterY, 0);
-	deltaVector = FVector(0, 0, 0);
+	
 
 	for (int i = 0; i < 4; i++)
 	{
-		initPoints.at(i).x += deltaVector.X;
-		initPoints.at(i).y += deltaVector.Y;
+		initPoints->at(i).x += deltaVector.X;
+		initPoints->at(i).y += deltaVector.Y;
 	}
 
 	
@@ -367,13 +367,9 @@ void AWebcamReader::Track()
 
 	//distortion Matrix
 	cv::Mat distMat = cv::Mat(1, 5, CV_64F);
-	for (int i = 0; i < 5; i++)
-	{
-		distMat.at<double>(0, i) = cameraDistortion[i];
-	}
+	distMat = cv::Mat::zeros(1, 5, CV_64F);
 
-
-	cv::solvePnP(init3dPoints, initPoints, camMat, distMat, rotvec, transvec);
+	cv::solvePnP(*init3dPoints, *initPoints, camMat, distMat, rotvec, transvec);
 
 	cv::Mat rotMat = cv::Mat(3, 3, CV_64F);
 	cv::Rodrigues(rotvec, rotMat);
@@ -543,9 +539,9 @@ void AWebcamReader::LoadConfigFiles()
 	translationVector[1] = tVec.at<double>(1, 0);
 	translationVector[2] = tVec.at<double>(2, 0);
 
-	fs_rt["InitPoints"] >> initPoints;
+	fs_rt["InitPoints"] >> *initPoints;
 
-	fs_rt["Init3DPoints"] >> init3dPoints;
+	fs_rt["Init3DPoints"] >> *init3dPoints;
 
 	fs_rt.release();
 
