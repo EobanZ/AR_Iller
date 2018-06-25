@@ -44,7 +44,7 @@ void AWebcamReader::BeginPlay()
 	std::string RelativeContentPathString = std::string(TCHAR_TO_UTF8(*RelativeContentPath));
 
 	// Open the stream
-	stream.open(RelativeContentPathString + "Iller_wackel.mp4"); //mit webcam hier einfach "CameraID" in die klammern
+	stream.open(RelativeContentPathString + "StaudamVid.mp4"); //mit webcam hier einfach "CameraID" in die klammern
 	if (stream.isOpened())
 	{
 		isStreamOpen = true;
@@ -243,7 +243,7 @@ void AWebcamReader::FindImageWithSURF()
 
 	//Load Image to search for
 	cv::Mat* targetImage = new cv::Mat();
-	*targetImage = cv::imread(RelativeContentPathString + "targetPic_Wackel.PNG");
+	*targetImage = cv::imread(RelativeContentPathString + "Staudam_TrackPic.png");
 
 	////Read Video
 	//VideoCapture* video = new VideoCapture(RelativeContentPathString + "StaudamVid.mp4"); //<-- use webcam later
@@ -311,7 +311,7 @@ void AWebcamReader::FindImageWithSURF()
 	std::vector<Point2f>* scene_corners = new std::vector<Point2f>(4);
 	cv::perspectiveTransform(*obj_corners, *scene_corners, *H);
 
-	//Create Rect2d Box for trackerrr
+	//Create Rect2d Box for tracker
 	if (bbox)
 		delete bbox;
 	bbox = new cv::Rect2d(scene_corners->at(0).x, scene_corners->at(0).y, scene_corners->at(1).x - scene_corners->at(0).x, scene_corners->at(3).y - scene_corners->at(0).y);	
@@ -325,6 +325,8 @@ void AWebcamReader::Track()
 
 	double oldCenterX, oldCenterY, newCenterX, newCenterY;
 
+	if (bbox == nullptr)
+		return;
 	oldCenterX = bbox->x + bbox->width / 2;
 	oldCenterY = bbox->y + bbox->height / 2;
 
@@ -493,8 +495,8 @@ void AWebcamReader::LoadConfigFiles()
 
 	cv::Mat rDistortionMatrix;
 	fs["DistortionMatrix"] >> rDistortionMatrix;
-
-	// cameramatrix für Iller
+	
+	// cameramatrix für Illerr
 	cameraMatrix[0][0] = rCameraMatrix.at<double>(0, 0);
 	cameraMatrix[0][1] = rCameraMatrix.at<double>(0, 1);
 	cameraMatrix[0][2] = rCameraMatrix.at<double>(0, 2);
@@ -516,7 +518,7 @@ void AWebcamReader::LoadConfigFiles()
 
 	//Load RT Vecotrs
 	cv::FileStorage fs_rt;	
-	string filename_RT = "/rtVectors_wackel.xml";
+	string filename_RT = "/rtVectors.xml";
 	string rtPath = Path; rtPath = rtPath.append(filename_RT);
 
 	fs_rt.open(rtPath, FileStorage::READ);
