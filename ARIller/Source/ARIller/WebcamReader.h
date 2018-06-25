@@ -58,6 +58,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
 	int32 OperationMode;
 
+	// If the webcam images should be resized every frame
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
+	bool ShouldResize;
+
 	// The targeted resize width and height (width, height)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
 	FVector2D ResizeDeminsions;

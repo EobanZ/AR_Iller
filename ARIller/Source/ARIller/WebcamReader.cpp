@@ -23,6 +23,7 @@ AWebcamReader::AWebcamReader()
 	isStreamOpen = false;
 	VideoSize = FVector2D(0, 0);
 	ResizeDeminsions = FVector2D(1920, 1080);
+	ShouldResize = true;
 	RefreshTimer = 0.0f;
 	stream = cv::VideoCapture();
 	frame = cv::Mat();
@@ -94,6 +95,7 @@ void AWebcamReader::Tick(float DeltaTime)
 		DoProcessing();
 		UpdateTexture();
 		OnNextVideoFrame();
+		
 	}
 
 
@@ -112,6 +114,9 @@ void AWebcamReader::UpdateFrame()
 	if (stream.isOpened())
 	{
 		stream.read(frame);
+		if (ShouldResize) {
+			cv::resize(frame, frame, cv::Size(1920,1080));
+		}
 	}
 	else
 	{
@@ -125,7 +130,7 @@ void AWebcamReader::DoProcessing()
 
 	if (OperationMode == 0)
 	{
-		// Apply nothing
+		// Apply nothings
 	}
 	else if (OperationMode == 1)
 	{
@@ -306,7 +311,7 @@ void AWebcamReader::FindImageWithSURF()
 	std::vector<Point2f>* scene_corners = new std::vector<Point2f>(4);
 	cv::perspectiveTransform(*obj_corners, *scene_corners, *H);
 
-	//Create Rect2d Box for tracker
+	//Create Rect2d Box for trackerrr
 	if (bbox)
 		delete bbox;
 	bbox = new cv::Rect2d(scene_corners->at(0).x, scene_corners->at(0).y, scene_corners->at(1).x - scene_corners->at(0).x, scene_corners->at(3).y - scene_corners->at(0).y);	
