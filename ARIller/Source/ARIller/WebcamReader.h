@@ -116,16 +116,18 @@ public:
 	double cameraDistortion[5];
 	int* imageWith = new int; //ohne pointer hats hier immer bugs gegeben
 	int* imageHeight = new int;
-
-	double rotationMatrix[3][3];
-	double translationVector[3];
-
-	cv::Point2d* principalPoint = new cv::Point2d;
 	double fovx;
 	double fovy;
 	double aspectRatio;
-	double focalLenght;
+
 	double billboardDistance = 10000; //100m
+
+
+	double rotationMatrix[3][3]; //used only in EstimatePosition. Delete?
+	double translationVector[3]; //used only in EstimatePosition. Delete?
+
+
+	
 
 	UCameraComponent* cam;
 	UStaticMeshComponent* billboard;
@@ -144,7 +146,7 @@ public:
 
 	void ResizeBillboard();
 
-	void EstimatePosition();
+	void EstimatePosition(); //Still relevant?
 
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Camera Reference", Keywords = "Set Camera Reference"), Category = Webcam)
 	void SetCameraReference(UCameraComponent* cameraComponent);

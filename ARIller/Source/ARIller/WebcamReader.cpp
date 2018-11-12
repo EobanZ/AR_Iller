@@ -383,7 +383,7 @@ void AWebcamReader::Track()
 
 
 	FMatrix matrix = FMatrix(FVector((float)rotMat.at<double>(0,0), (float)rotMat.at<double>(1,0), (float)rotMat.at<double>(2,0)), FVector((float)rotMat.at<double>(0,1), (float)rotMat.at<double>(1,1), (float)rotMat.at<double>(2,1)), FVector((float)rotMat.at<double>(0,2), (float)rotMat.at<double>(1,2), (float)rotMat.at<double>(2,2)), FVector((float)transvec.at<double>(0), (float)transvec.at<double>(1), (float)transvec.at<double>(2)));
-
+	
 	planeTransform.SetFromMatrix(matrix);
 	planeTransform.SetScale3D(FVector(1, 1, 1));
 
@@ -395,7 +395,7 @@ void AWebcamReader::Track()
 
 void AWebcamReader::CalculateAndSetFOV()
 {
-	billboard->SetRelativeLocation(FVector(billboardDistance, 0, 0));
+	billboard->SetRelativeLocation(FVector(billboardDistance, 0, 0)); //BB nach hinten verschieben
 
 	double u0 = *imageWith*0.5;
 	double v0 = *imageHeight*0.5;
@@ -404,7 +404,7 @@ void AWebcamReader::CalculateAndSetFOV()
 	fovx = (FMath::Atan2(u0, fx) + FMath::Atan2(*imageWith - u0, fx)) * 180.0 / PI;
 	fovy = (FMath::Atan2(v0, fy) + FMath::Atan2(*imageHeight - v0, fy)) * 180.0 / PI;
 
-	float aspec = *imageWith / *imageHeight;
+	float aspectRatio = *imageWith / *imageHeight;
 
 	cam->SetFieldOfView(fovx);
 
@@ -557,7 +557,7 @@ void AWebcamReader::LoadConfigFiles()
 void AWebcamReader::ResizeBillboard()
 {
 
-	float distance_to_origin = billboard->GetRelativeTransform().GetLocation().Size();
+	float distance_to_origin =  billboardDistance //billboard->GetRelativeTransform().GetLocation().Size();
 
 	float width = distance_to_origin * 2.0 * FMath::Tan(FMath::DegreesToRadians(0.5 * fovx));
 	float height = width * (float)*imageHeight / (float)*imageWith;
@@ -587,8 +587,6 @@ void AWebcamReader::EstimatePosition()
 
 	planeTransform = planeTransform * CameraAdditionalRotation;
 
-
-	//cube->SetRelativeTransform(planeTransform);
 
 	ground->SetActorTransform(planeTransform);
 
